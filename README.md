@@ -1,4 +1,4 @@
-# Tea Quality App
+# TeaOptima 
 
 A Flutter application for analyzing tea leaf quality using AI/ML prediction models and weather data integration.
 
