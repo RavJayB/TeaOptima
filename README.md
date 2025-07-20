@@ -4,12 +4,29 @@ A Flutter application for analyzing tea leaf quality using AI/ML prediction mode
 
 ## Features
 
-- 📸 **Image Classification**: Capture tea leaf images for quality analysis
-- 🔮 **Quality Prediction**: AI-powered prediction of tea leaf degradation over time
-- 🌤️ **Weather Integration**: Real-time weather data affecting tea quality
-- 📊 **Data Visualization**: Charts and graphs showing quality trends
-- 🔥 **Firebase Integration**: User authentication and data storage
-- 📱 **Cross-Platform**: Works on iOS, Android, and Web
+- 📸 **Image Classification**: 
+  - Capture high-resolution images of tea leaves directly from the app.
+  - Utilize advanced machine learning models to analyze and classify the quality of tea leaves based on visual characteristics.
+
+- 🔮 **Quality Prediction**: 
+  - Leverage AI-powered algorithms to predict the degradation of tea leaves over time.
+  - Provide users with insights into the expected quality changes, helping in better inventory and quality management.
+
+- 🌤️ **Weather Integration**: 
+  - Integrate real-time weather data to assess its impact on tea quality.
+  - Use OpenWeatherMap API to fetch current weather conditions and forecasts, influencing tea leaf quality predictions.
+
+- 📊 **Data Visualization**: 
+  - Display comprehensive charts and graphs to visualize quality trends over time.
+  - Enable users to track historical data and make informed decisions based on visual analytics.
+
+- 🔥 **Firebase Integration**: 
+  - Implement secure user authentication using Firebase Auth.
+  - Store user data and app configurations in Firebase Firestore for seamless data management and retrieval.
+
+- 📱 **Cross-Platform**: 
+  - Ensure compatibility across iOS, Android, and Web platforms.
+  - Provide a consistent user experience regardless of the device or platform used.
 
 ## Setup Instructions
 
