@@ -1,0 +1,61 @@
+# macOS system files
+.DS_Store
+
+# Flutter
+build/
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+generated_plugin_registrant.dart
+
+# iOS
+ios/Pods/
+ios/Runner.xcworkspace/
+*.xcuserstate
+ios/Runner/GoogleService-Info.plist
+
+# Android
+android/.gradle/
+android/app/build/
+
+# IDEs
+.idea/
+.vscode/
+
+# Firebase sensitive configs
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+lib/firebase_options.dart
+
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+.env.development
+*.env
+
+# Others
+*.log
+.assets/
+
+# Additional files to ignore
+# Build and generated files
+*.apk
+*.ipa
+*.aab
+
+# Local environment and IDE settings
+*.iml
+
+# Log files
+*.log
+
+# System files
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+
+GoogleService-Info.plist
