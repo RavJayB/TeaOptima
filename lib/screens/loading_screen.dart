@@ -4,7 +4,14 @@ class LoadingScreen extends StatefulWidget {
   final String? message;
   final Future<void> Function()? futureTask;
   final void Function(BuildContext)? onTaskComplete;
-  const LoadingScreen({Key? key, this.message, this.futureTask, this.onTaskComplete}) : super(key: key);
+  final void Function(BuildContext, String)? onTaskError;
+  const LoadingScreen({
+    Key? key, 
+    this.message, 
+    this.futureTask, 
+    this.onTaskComplete,
+    this.onTaskError,
+  }) : super(key: key);
 
   @override
   State<LoadingScreen> createState() => _LoadingScreenState();
@@ -19,8 +26,58 @@ class _LoadingScreenState extends State<LoadingScreen> {
         if (widget.onTaskComplete != null && mounted) {
           widget.onTaskComplete!(context);
         }
+      }).catchError((error) {
+        if (mounted) {
+          String errorMessage = 'An error occurred';
+          
+          // Handle Firebase Auth errors following security best practices
+          if (error.toString().contains('invalid-credential')) {
+            errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+          } else if (error.toString().contains('user-disabled')) {
+            errorMessage = 'This account has been disabled. Please contact support.';
+          } else if (error.toString().contains('too-many-requests')) {
+            errorMessage = 'Too many failed attempts. Please try again later.';
+          } else if (error.toString().contains('network-request-failed')) {
+            errorMessage = 'Network error. Please check your internet connection.';
+          } else if (error.toString().contains('operation-not-allowed')) {
+            errorMessage = 'Email/password sign-in is not enabled. Please contact support.';
+          } else {
+            errorMessage = 'Login failed. Please try again.';
+          }
+          
+          if (widget.onTaskError != null) {
+            widget.onTaskError!(context, errorMessage);
+          } else {
+            // Default error handling - show dialog and go back
+            _showErrorDialog(context, errorMessage);
+          }
+        }
       });
     }
+  }
+  
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dismissing by tapping outside
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Login Failed'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Close dialog
+                // Go back to the previous screen (login screen)
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

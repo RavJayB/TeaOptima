@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => LoadingScreen(
           message: "Logging in...",
@@ -39,8 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           },
           onTaskComplete: (ctx) {
-            Navigator.of(ctx).pushReplacement(
+            Navigator.of(ctx).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const MainScreen(startingIndex: 0)),
+              (route) => false, // Remove all previous routes
             );
           },
           
