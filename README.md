@@ -2,6 +2,28 @@
 
 A Flutter application for analyzing tea leaf quality using AI/ML prediction models and weather data integration.
 
+![Python](https://img.shields.io/badge/-Python-05122A?style=flat&logo=python)&nbsp;
+![Flutter](https://img.shields.io/badge/-Flutter-05122A?style=flat&logo=Flutter)&nbsp;
+![Docker](https://img.shields.io/badge/-Docker-05122A?style=flat&logo=docker)&nbsp;
+![Google Cloud](https://img.shields.io/badge/-Google_Cloud-05122A?style=flat&logo=googlecloud)&nbsp;
+![Firebase](https://img.shields.io/badge/-Firebase-05122A?style=flat&logo=firebase)&nbsp;
+![Googlecolab](https://img.shields.io/badge/-GoogleColab-05122A?style=flat&logo=googlecolab)&nbsp;
+![GitHub](https://img.shields.io/badge/-GitHub-05122A?style=flat&logo=github)&nbsp;
+![Figma](https://img.shields.io/badge/-Figma-05122A?style=flat&logo=figma)&nbsp;
+![Firebase](https://img.shields.io/badge/-Firebase-05122A?style=flat&logo=firebase)&nbsp;
+
+
+## UI Samples
+
+<p align="center">
+  <img src="assets/screenshots/Welcome_Screen_2.png" width="250" />
+  <img src="assets/screenshots/Login_Screen.png" width="250" />
+  <img src="assets/screenshots/User_Registration.png" width="250" />
+  <img src="assets/screenshots/Image_Classification.jpeg" height="600" width="250"  />
+  <img src="assets/screenshots/Home_Screen.png" width="250"/>
+  <img src="assets/screenshots/User_profile.png" width="250"/>
+</p>
+
 ## Features
 
 - 📸 **Image Classification**: 
