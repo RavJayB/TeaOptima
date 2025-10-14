@@ -180,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 36),
 
-                  // — Sign up link
+                  // — User sign up link
                     RichText(
                     text: TextSpan(
                       text: "Don't have an account?  ",
