@@ -31,7 +31,7 @@ A Flutter application for analyzing tea leaf quality using AI/ML prediction mode
   - Capture high-resolution images of tea leaves directly from the app.
   - Utilize advanced machine learning models to analyze and classify the quality of tea leaves based on visual characteristics.
 
-- 🔮 **Quality Prediction**: 
+- 🔮 **Degradate Prediction**: 
   - Leverage AI-powered algorithms to predict the degradation of tea leaves over time.
   - Provide users with insights into the expected quality changes, helping in better inventory and quality management.
 
