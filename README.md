@@ -16,12 +16,12 @@ A Flutter application for analyzing tea leaf quality using AI/ML prediction mode
 ## UI Samples
 
 <p align="center">
-  <img src="assets/screenshots/Welcome_Screen_2.png" width="250" />
-  <img src="assets/screenshots/Login_Screen.png" width="250" />
-  <img src="assets/screenshots/User_Registration.png" width="250" />
-  <img src="assets/screenshots/Image_Classification.jpeg" height="600" width="250"  />
-  <img src="assets/screenshots/Home_Screen.png" width="250"/>
-  <img src="assets/screenshots/User_profile.png" width="250"/>
+  <img src="assets/screenshots/Welcome_Screen_2.png" width="150" />
+  <img src="assets/screenshots/Login_Screen.png" width="150" />
+  <!-- <img src="assets/screenshots/User_Registration.png" width="150" /> -->
+  <img src="assets/screenshots/Image_Classification.jpeg" height="400" width="159"  />
+  <img src="assets/screenshots/Home_Screen.png" width="150"/>
+  <!-- <img src="assets/screenshots/User_profile.png" width="150"/> -->
 </p>
 
 ## Features
