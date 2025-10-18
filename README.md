@@ -85,7 +85,9 @@ flutter pub get
    ```env
    OPENWEATHER_API_KEY=your_actual_openweather_api_key
    IMAGE_SERVICE_URL=your_image_service_url
-   DEGRADE_SERVICE_URL=your_degrade_service_url
+   
+   DEGRADE_SERVICE_URL=your_degrade_service_url        # Random Forest Model
+   IMAGE_CLASSIFICATION_SERVICE_URL=your_degrade_service_url    # YoloV8 Model 
    ```
 
 #### Option B: Using Default Values (Development)
