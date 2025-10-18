@@ -84,10 +84,8 @@ flutter pub get
 2. Edit `.env` and replace placeholder values:
    ```env
    OPENWEATHER_API_KEY=your_actual_openweather_api_key
-   IMAGE_SERVICE_URL=your_image_service_url
-   
-   DEGRADE_SERVICE_URL=your_degrade_service_url        # Random Forest Model
-   IMAGE_CLASSIFICATION_SERVICE_URL=your_degrade_service_url    # YoloV8 Model 
+   IMAGE_SERVICE_URL=your_image_service_url   # contains YOLOv8 Model 
+   DEGRADE_SERVICE_URL=your_degrade_service_url  # contains Random Forest Model
    ```
 
 #### Option B: Using Default Values (Development)
