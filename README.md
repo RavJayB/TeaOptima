@@ -1,6 +1,29 @@
 # TeaOptima 
 
-A Flutter application for analyzing tea leaf quality using AI/ML prediction models and weather data integration.
+A Flutter application for analyzing tea leaf quality and quality degradation using hybrid AI/ML prediction models with weather data integration.
+
+![Python](https://img.shields.io/badge/-Python-05122A?style=flat&logo=python)&nbsp;
+![Yolo](https://img.shields.io/badge/-YoloV8-05122A?style=flat&logo=yolo)&nbsp;
+![Numpy](https://img.shields.io/badge/-Numpy-05122A?style=flat&logo=numpy)&nbsp;
+![Flutter](https://img.shields.io/badge/-Flutter-05122A?style=flat&logo=Flutter)&nbsp;
+![Docker](https://img.shields.io/badge/-Docker-05122A?style=flat&logo=docker)&nbsp;
+![Google Cloud](https://img.shields.io/badge/-Google_Cloud-05122A?style=flat&logo=googlecloud)&nbsp;
+![Firebase](https://img.shields.io/badge/-Firebase-05122A?style=flat&logo=firebase)&nbsp;
+![Googlecolab](https://img.shields.io/badge/-Google_Colab-05122A?style=flat&logo=googlecolab)&nbsp;
+![Figma](https://img.shields.io/badge/-Figma-05122A?style=flat&logo=figma)&nbsp;
+![Firebase](https://img.shields.io/badge/-Firebase-05122A?style=flat&logo=firebase)&nbsp;
+
+
+## UI Samples
+
+<p align="center">
+  <img src="assets/screenshots/Welcome_Screen_2.png" width="150" />
+  <img src="assets/screenshots/Login_Screen.png" width="150" />
+  <!-- <img src="assets/screenshots/User_Registration.png" width="150" /> -->
+  <img src="assets/screenshots/Image_Classification.jpeg" height="400" width="159"  />
+  <img src="assets/screenshots/Home_Screen.png" width="150"/>
+  <!-- <img src="assets/screenshots/User_profile.png" width="150"/> -->
+</p>
 
 ## Features
 
@@ -8,7 +31,7 @@ A Flutter application for analyzing tea leaf quality using AI/ML prediction mode
   - Capture high-resolution images of tea leaves directly from the app.
   - Utilize advanced machine learning models to analyze and classify the quality of tea leaves based on visual characteristics.
 
-- 🔮 **Quality Prediction**: 
+- 🔮 **Degradate Prediction**: 
   - Leverage AI-powered algorithms to predict the degradation of tea leaves over time.
   - Provide users with insights into the expected quality changes, helping in better inventory and quality management.
 
@@ -64,8 +87,8 @@ flutter pub get
    OPENWEATHER_API_KEY=your_actual_openweather_api_key
    
    # Optional - Override default service URLs if needed
-   IMAGE_SERVICE_URL=your_image_service_url
-   DEGRADE_SERVICE_URL=your_degrade_service_url
+   IMAGE_SERVICE_URL=your_image_service_url   # contains YOLOv8 Model 
+   DEGRADE_SERVICE_URL=your_degrade_service_url  # contains Random Forest Model
    ```
 
 **Note**: The app will crash on startup if `OPENWEATHER_API_KEY` is missing. Service URLs have fallback values for development.
