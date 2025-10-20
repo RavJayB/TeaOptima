@@ -15,11 +15,16 @@ class ConfigService {
 
   // OpenWeatherMap API Key
   static String get openWeatherApiKey {
-    return dotenv.env['OPENWEATHER_API_KEY'] ?? 
-           '3683f0b1c4b8dede66df6c597ae5b5b2'; // Fallback for existing users
+    final key = dotenv.env['OPENWEATHER_API_KEY'];
+    if (key == null || key.isEmpty) {
+      throw StateError('Missing OPENWEATHER_API_KEY. Add it to your .env (see .env.example).');
+    }
+    return key;
   }
 
   // Backend service URLs
+  // Note: These are public service endpoints, not secrets. Protection is via authentication on the backend.
+  // For production, override these in .env to use your own services or different environments.
   static String get imageServiceUrl {
     return dotenv.env['IMAGE_SERVICE_URL'] ?? 
            'https://image-svc-1036518290491.asia-south1.run.app/classify';
@@ -31,6 +36,8 @@ class ConfigService {
   }
 
   // Firebase configuration (optional - firebase_options.dart is primary)
+  // Note: Project ID and storage bucket are public identifiers, not secrets. Security is via Firebase Rules.
+  // These can be overridden in .env for different environments (dev/staging/prod).
   static String get firebaseProjectId {
     return dotenv.env['FIREBASE_PROJECT_ID'] ?? 'teamate-2b851';
   }

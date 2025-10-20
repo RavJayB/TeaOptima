@@ -51,7 +51,7 @@ flutter pub get
 
 ### 3. Environment Configuration
 
-#### Option A: Using Environment Variables (Recommended for Production)
+**⚠️ Required**: You must create a `.env` file with the required API key.
 
 1. Copy the environment template:
    ```bash
@@ -60,14 +60,15 @@ flutter pub get
 
 2. Edit `.env` and replace placeholder values:
    ```env
+   # Required - Get from https://openweathermap.org/api
    OPENWEATHER_API_KEY=your_actual_openweather_api_key
+   
+   # Optional - Override default service URLs if needed
    IMAGE_SERVICE_URL=your_image_service_url
    DEGRADE_SERVICE_URL=your_degrade_service_url
    ```
 
-#### Option B: Using Default Values (Development)
-
-The app includes fallback values for development. You can skip the `.env` setup if you're just testing.
+**Note**: The app will crash on startup if `OPENWEATHER_API_KEY` is missing. Service URLs have fallback values for development.
 
 ### 4. Firebase Configuration
 
@@ -86,11 +87,11 @@ The app includes fallback values for development. You can skip the `.env` setup 
 
 ### 5. API Keys Setup
 
-#### OpenWeatherMap API (Optional)
+#### OpenWeatherMap API (Required)
 
 1. Sign up at [OpenWeatherMap](https://openweathermap.org/api)
 2. Get your free API key
-3. Add it to your `.env` file or use the default fallback
+3. Add it to your `.env` file - **this is required for the app to run properly**
 
 #### Backend Services
 
@@ -149,10 +150,11 @@ flutterfire configure
 
 ### Common Issues
 
-1. **"Classification failed (500)"**: Backend service is down or misconfigured
-2. **Firebase initialization errors**: Check `firebase_options.dart` configuration
-3. **Weather data not loading**: Verify OpenWeatherMap API key
-4. **Build errors**: Run `flutter clean && flutter pub get`
+1. **"Missing OPENWEATHER_API_KEY"**: Create a `.env` file with your OpenWeatherMap API key
+2. **"Classification failed (500)"**: Backend service is down or misconfigured
+3. **Firebase initialization errors**: Check `firebase_options.dart` configuration
+4. **Weather data not loading**: Verify OpenWeatherMap API key in `.env`
+5. **Build errors**: Run `flutter clean && flutter pub get`
 
 ### Getting Help
 
