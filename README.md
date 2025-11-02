@@ -184,6 +184,7 @@ flutterfire configure
 - Check the [Flutter documentation](https://docs.flutter.dev/)
 - Review Firebase setup guides
 - Ensure all API keys are correctly configured
+- For any questions or collaboration, Contact me through my portfolio: [ravindubandara.dev](https://ravindubandara.dev)
 
 ## Contributing
 
