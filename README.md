@@ -17,7 +17,7 @@ Research system for analyzing tea leaf quality and forecasting quality degradati
 
 [![DOI](https://img.shields.io/badge/DOI-10.1109%2FMERCon67903.2025.11216994-blue)](https://doi.org/10.1109/MERCon67903.2025.11216994)
 
-My **research paper** behind *TeaOptima* was **presented at the Moratuwa Engineering Research Conference (MERCon) 2025** and **published in IEEE**:
+The **research paper** behind *TeaOptima* has been published in the **IEEE Xplore** proceedings of the **MERCon-Moratuwa Engineering Research Conference 2025** :
 
 **R. J. Bandara and A. Kuruppu**, “*Predictive Analytics for Tea Leaf Aging and Quality Degradation*,” *2025 Moratuwa Engineering Research Conference (MERCon)*, Moratuwa, Sri Lanka, pp. 239–244, 2025.  
 
