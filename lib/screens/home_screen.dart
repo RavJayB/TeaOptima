@@ -1,13 +1,11 @@
 // lib/screens/home_screen.dart
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
-import '../services/config_service.dart';
+import '../services/api_service.dart';
 import 'main_screen.dart';
 
 // ────────────────────────────────────────────────────────────
@@ -44,40 +42,21 @@ class WeatherCache {
       final pos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
       final lat = pos.latitude, lon = pos.longitude;
-      final apiKey = ConfigService.openWeatherApiKey;
 
-      // 3) Reverse geocode
-      final geoUri = Uri.https('api.openweathermap.org', '/geo/1.0/reverse', {
-        'lat': '$lat',
-        'lon': '$lon',
-        'limit': '1',
-        'appid': apiKey,
-      });
-      final geoRes = await http.get(geoUri);
-      if (geoRes.statusCode == 200) {
-        final list = jsonDecode(geoRes.body) as List<dynamic>;
-        if (list.isNotEmpty) {
-          location = list[0]['name'] as String? ?? 'Unknown';
-        }
-      }
+      // 3) Reverse geocode via backend
+      final loc = await ApiService.getLocation(lat: lat, lon: lon);
+      location = (loc['name'] as String?) ?? 'Unknown';
 
-      // 4) Fetch weather
-      final wUri = Uri.https('api.openweathermap.org', '/data/2.5/weather', {
-        'lat': '$lat',
-        'lon': '$lon',
-        'units': 'metric',
-        'appid': apiKey,
-      });
-      final wRes  = await http.get(wUri);
-      final wData = jsonDecode(wRes.body);
-      temp = (wData['main']['temp'] as num).toDouble();
-      hum  = (wData['main']['humidity'] as num).toDouble();
-      rain = (wData['rain']?['1h'] as num?)?.toDouble() ?? 0;
+      // 4) Current weather via backend
+      final w = await ApiService.getCurrentWeather(lat: lat, lon: lon);
+      temp = (w['temp'] as num).toDouble();
+      hum  = (w['hum']  as num).toDouble();
+      rain = (w['rain'] as num).toDouble();
 
       // 5) Stamp fetch time
       _lastFetch = DateTime.now();
-    } catch (_) {
-      // swallow
+    } catch (e, st) {
+      debugPrint('WeatherCache.load failed: $e\n$st');
     }
   }
 }
@@ -117,7 +96,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _setupGreeting();
     _startCarousel();
     // THIS will only actually fetch if >15m or never fetched
-    WeatherCache.load().then((_) => setState(() {}));
+    WeatherCache.load().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -203,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           await WeatherCache.load(force: true);
-          setState(() {});
+          if (mounted) setState(() {});
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

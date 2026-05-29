@@ -149,8 +149,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
     }
   }
 
-  void _showSnackBar(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _showSnackBar(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
 
   // ─── Image preview widget ─────────────────────────────────────────────────
  /// Shows either: loading spinner, full image, or a centered placeholder that shrinks.
