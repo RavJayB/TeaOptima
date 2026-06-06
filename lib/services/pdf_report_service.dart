@@ -10,9 +10,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+
+import 'package:flutter/services.dart' show rootBundle;
 
 import 'recommendation_engine.dart';
 
@@ -56,7 +59,12 @@ class _Palette {
 }
 
 class PdfReportService {
+  // Latin letter-spacing splits Sinhala/Tamil conjuncts and vowel signs apart,
+  // so tracking is suppressed for those scripts (kept for English).
+  static bool _noTracking = false;
+
   static Future<Uint8List> generate({
+    required AppLocalizations l,
     required List<dynamic> timeline,
     required List<dynamic> milestones,
     required String startingQuality,
@@ -83,6 +91,11 @@ class PdfReportService {
     final now = DateTime.now();
     final reportTs = DateFormat('d MMM yyyy, HH:mm').format(now);
 
+    // Embed a Unicode font so Sinhala/Tamil glyphs render (the built-in PDF
+    // font is Latin-only). English uses the default font.
+    final theme = await _localeTheme(l.localeName);
+    _noTracking = l.localeName != 'en';
+
     final startShort = _short(startingQuality);
     final endShort = _short(terminalTier);
     final lastDay =
@@ -90,9 +103,10 @@ class PdfReportService {
     final terminalDate = now.add(Duration(days: lastDay));
 
     // ── derive urgency + impact + insights with the same logic as the screen
-    final urgency = _Urgency.from(timeline, startShort);
-    final impact = _Impact.from(urgency, prices, batchKg);
+    final urgency = _Urgency.from(timeline, startShort, l);
+    final impact = _Impact.from(urgency, prices, batchKg, l, money);
     final insights = RecommendationEngine.generate(
+      l: l,
       timeline: timeline,
       milestones: milestones,
       startingQuality: startingQuality,
@@ -108,31 +122,40 @@ class PdfReportService {
       } catch (_) {}
     }
 
+    // Per-day SHAP drivers for the terminal (final-grade) day, if present.
+    final dayFactors = (timeline.isNotEmpty && timeline.last['factors'] is List)
+        ? (timeline.last['factors'] as List)
+        : const <dynamic>[];
+    final hasDrivers = dayFactors.isNotEmpty;
+
     doc.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
+        theme: theme,
         margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 24),
         build: (ctx) => [
-          _header(reportTs, place, leafAge, batchKg),
+          _header(l, reportTs, place, leafAge, batchKg),
           pw.SizedBox(height: 14),
           _heroJourney(
-              startShort, endShort, lastDay, terminalDate, urgency, money),
+              l, startShort, endShort, lastDay, terminalDate, urgency, money),
           pw.SizedBox(height: 12),
-          _impactSection(impact, money, startShort, endShort),
+          _impactSection(l, impact, money, startShort, endShort),
           pw.SizedBox(height: 12),
-          _trajectoryTable(timeline),
+          _trajectoryTable(l, timeline),
           pw.SizedBox(height: 12),
-          if (insights.isNotEmpty) _insightsSection(insights),
+          if (hasDrivers) _keyDrivers(l, timeline, now),
+          if (hasDrivers) pw.SizedBox(height: 12),
+          if (insights.isNotEmpty) _insightsSection(l, insights),
           if (insights.isNotEmpty) pw.SizedBox(height: 12),
-          _actionPlan(milestones, now),
+          _actionPlan(l, milestones, now),
           pw.SizedBox(height: 12),
-          _fieldConditions(place, currentTemp, currentHum, currentRain),
+          _fieldConditions(l, place, currentTemp, currentHum, currentRain),
           if (imgBytes != null) ...[
             pw.SizedBox(height: 12),
-            _leafSample(imgBytes),
+            _leafSample(l, imgBytes),
           ],
           pw.SizedBox(height: 14),
-          _footer(reportTs),
+          _footer(l, reportTs),
         ],
       ),
     );
@@ -141,8 +164,8 @@ class PdfReportService {
   }
 
   // ── Header band ─────────────────────────────────────────────────────────
-  static pw.Widget _header(
-      String ts, String place, int leafAge, double batchKg) {
+  static pw.Widget _header(AppLocalizations l, String ts, String place,
+      int leafAge, double batchKg) {
     return pw.Container(
       padding: const pw.EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: pw.BoxDecoration(
@@ -186,14 +209,14 @@ class PdfReportService {
                         color: PdfColors.white,
                         fontWeight: pw.FontWeight.bold,
                         fontSize: 13,
-                        letterSpacing: 2.2,
+                        letterSpacing: _track(2.2),
                       ),
                     ),
                   ],
                 ),
                 pw.SizedBox(height: 8),
                 pw.Text(
-                  'Quality Forecast Report',
+                  l.pdfReportTitle,
                   style: pw.TextStyle(
                     color: PdfColors.white,
                     fontWeight: pw.FontWeight.bold,
@@ -202,7 +225,7 @@ class PdfReportService {
                 ),
                 pw.SizedBox(height: 4),
                 pw.Text(
-                  'Generated $ts',
+                  l.pdfGenerated(ts),
                   style: const pw.TextStyle(
                     color: PdfColors.white,
                     fontSize: 9.5,
@@ -214,12 +237,11 @@ class PdfReportService {
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
-              _miniMeta('LOCATION', place),
+              _miniMeta(l.resLocation, place),
               pw.SizedBox(height: 6),
-              _miniMeta('LEAF AGE', '$leafAge d'),
+              _miniMeta(l.resLeafAgeLabel, '$leafAge ${l.histDayShort}'),
               pw.SizedBox(height: 6),
-              _miniMeta(
-                  'BATCH',
+              _miniMeta(l.econBatch,
                   '${batchKg.toStringAsFixed(batchKg % 1 == 0 ? 0 : 1)} kg'),
             ],
           ),
@@ -238,7 +260,7 @@ class PdfReportService {
           style: pw.TextStyle(
             color: const PdfColor.fromInt(0xCCFFFFFF),
             fontSize: 7,
-            letterSpacing: 1.2,
+            letterSpacing: _track(1.2),
             fontWeight: pw.FontWeight.bold,
           ),
         ),
@@ -257,6 +279,7 @@ class PdfReportService {
 
   // ── Hero: tier journey + urgency ────────────────────────────────────────
   static pw.Widget _heroJourney(
+    AppLocalizations l,
     String startTier,
     String endTier,
     int lastDay,
@@ -268,7 +291,7 @@ class PdfReportService {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _sectionTitle('QUALITY TRAJECTORY', icon: '📈'),
+          _sectionTitle(l.resQualityTrajectory, icon: '📈'),
           pw.SizedBox(height: 10),
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -287,11 +310,11 @@ class PdfReportService {
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text(
-                    'TERMINAL GRADE',
+                    l.pdfTerminalGrade,
                     style: pw.TextStyle(
                       fontSize: 7.5,
                       color: _Palette.muted,
-                      letterSpacing: 1.4,
+                      letterSpacing: _track(1.4),
                       fontWeight: pw.FontWeight.bold,
                     ),
                   ),
@@ -328,11 +351,11 @@ class PdfReportService {
                     borderRadius: pw.BorderRadius.circular(6),
                   ),
                   child: pw.Text(
-                    urgency.level,
+                    _pdfLevelLabel(l, urgency.level),
                     style: pw.TextStyle(
                       color: PdfColors.white,
                       fontSize: 9,
-                      letterSpacing: 1.3,
+                      letterSpacing: _track(1.3),
                       fontWeight: pw.FontWeight.bold,
                     ),
                   ),
@@ -372,6 +395,7 @@ class PdfReportService {
 
   // ── Economic impact ─────────────────────────────────────────────────────
   static pw.Widget _impactSection(
+    AppLocalizations l,
     _Impact impact,
     NumberFormat money,
     String fromTier,
@@ -381,7 +405,7 @@ class PdfReportService {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _sectionTitle('ECONOMIC IMPACT', icon: 'Rs'),
+          _sectionTitle(l.econTitle, icon: 'Rs'),
           pw.SizedBox(height: 10),
           if (impact.showSavings) ...[
             pw.Row(
@@ -391,11 +415,11 @@ class PdfReportService {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      'PRESERVE BY ACTING NOW',
+                      l.pdfPreserveNow,
                       style: pw.TextStyle(
                         fontSize: 7.5,
                         color: _Palette.muted,
-                        letterSpacing: 1.4,
+                        letterSpacing: _track(1.4),
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
@@ -427,11 +451,11 @@ class PdfReportService {
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
                     pw.Text(
-                      'TOTAL AT RISK',
+                      l.pdfTotalAtRisk,
                       style: pw.TextStyle(
                         fontSize: 7.5,
                         color: _Palette.muted,
-                        letterSpacing: 1.4,
+                        letterSpacing: _track(1.4),
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
@@ -451,14 +475,15 @@ class PdfReportService {
             pw.SizedBox(height: 10),
             pw.Row(
               children: [
-                _ratePill('NOW', fromTier, impact.currentValue, money),
+                _ratePill(l.econNow, fromTier, impact.currentValue, money),
                 pw.SizedBox(width: 8),
                 pw.Text('→',
                     style: pw.TextStyle(
                         color: _Palette.muted,
                         fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(width: 8),
-                _ratePill('IF WAITED', toTier, impact.projectedValue, money),
+                _ratePill(
+                    l.econIfWaited, toTier, impact.projectedValue, money),
               ],
             ),
           ] else
@@ -492,7 +517,7 @@ class PdfReportService {
             style: pw.TextStyle(
               fontSize: 7.5,
               color: _Palette.muted,
-              letterSpacing: 1.4,
+              letterSpacing: _track(1.4),
               fontWeight: pw.FontWeight.bold,
             ),
           ),
@@ -513,11 +538,11 @@ class PdfReportService {
   }
 
   // ── 15-day trajectory table ─────────────────────────────────────────────
-  static pw.Widget _trajectoryTable(List<dynamic> timeline) {
+  static pw.Widget _trajectoryTable(AppLocalizations l, List<dynamic> timeline) {
     final headerStyle = pw.TextStyle(
       fontSize: 8.5,
       color: _Palette.muted,
-      letterSpacing: 1.1,
+      letterSpacing: _track(1.1),
       fontWeight: pw.FontWeight.bold,
     );
     final cellStyle = pw.TextStyle(fontSize: 9.5, color: _Palette.charcoal);
@@ -526,7 +551,7 @@ class PdfReportService {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _sectionTitle('15-DAY FORECAST'),
+          _sectionTitle(l.pdfForecast15),
           pw.SizedBox(height: 8),
           pw.Table(
             columnWidths: const {
@@ -543,12 +568,12 @@ class PdfReportService {
                   color: _Palette.surface,
                 ),
                 children: [
-                  _cell('DAY', headerStyle, header: true),
-                  _cell('DATE', headerStyle, header: true),
-                  _cell('GRADE', headerStyle, header: true),
-                  _cell('TEMP °C', headerStyle, header: true),
-                  _cell('HUM %', headerStyle, header: true),
-                  _cell('RAIN mm', headerStyle, header: true),
+                  _cell(l.pdfColDay, headerStyle, header: true),
+                  _cell(l.pdfColDate, headerStyle, header: true),
+                  _cell(l.pdfColGrade, headerStyle, header: true),
+                  _cell(l.pdfColTemp, headerStyle, header: true),
+                  _cell(l.pdfColHum, headerStyle, header: true),
+                  _cell(l.pdfColRain, headerStyle, header: true),
                 ],
               ),
               ...timeline.map((t) {
@@ -604,25 +629,180 @@ class PdfReportService {
     );
   }
 
-  // ── Expert recommendations ──────────────────────────────────────────────
-  static pw.Widget _insightsSection(List<Recommendation> insights) {
+  // ── Per-day SHAP drivers (mirrors the in-app contribution bars) ──────────
+  static pw.Widget _keyDrivers(
+      AppLocalizations l, List<dynamic> timeline, DateTime now) {
+    final last = timeline.last as Map;
+    final raw = last['factors'];
+    final factors = (raw is List) ? raw.whereType<Map>().toList() : <Map>[];
+    final tier = _short((last['tier'] ?? '').toString());
+    final day = (last['day'] is num) ? (last['day'] as num).toInt() : 0;
+    final date = DateFormat('d MMM').format(now.add(Duration(days: day)));
+    final maxAbs = factors
+        .fold<double>(0.0, (m, f) {
+          final c = (f['contribution'] as num?)?.toDouble().abs() ?? 0.0;
+          return c > m ? c : m;
+        })
+        .clamp(1e-6, double.infinity);
+
     return _surfaceCard(
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _sectionTitle('EXPERT RECOMMENDATIONS',
-              suffix: '${insights.length} insight${insights.length == 1 ? '' : 's'}'),
+          _sectionTitle(l.resWhatDrives, suffix: '$tier · $date'),
+          pw.SizedBox(height: 8),
+          pw.Row(children: [
+            _driverLegend(_Palette.primary, l.factorProtects),
+            pw.SizedBox(width: 16),
+            _driverLegend(const PdfColor.fromInt(0xFFB8843A), l.factorDegrades),
+          ]),
+          pw.SizedBox(height: 10),
+          ...factors.map((f) => _driverBar(l, f, maxAbs)),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _driverLegend(PdfColor c, String label) {
+    return pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      children: [
+        pw.Container(
+          width: 7,
+          height: 7,
+          decoration: pw.BoxDecoration(color: c, shape: pw.BoxShape.circle),
+        ),
+        pw.SizedBox(width: 5),
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 8,
+            color: _Palette.muted,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _driverBar(AppLocalizations l, Map f, double maxAbs) {
+    final key = (f['key'] ?? '').toString();
+    final contribution = (f['contribution'] as num?)?.toDouble() ?? 0.0;
+    final value = (f['value'] as num?)?.toDouble();
+    final degrading = contribution < 0;
+    final color =
+        degrading ? const PdfColor.fromInt(0xFFB8843A) : _Palette.primary;
+    final frac = (contribution.abs() / maxAbs).clamp(0.0, 1.0);
+    final int filled = (frac * 100).round().clamp(1, 100).toInt();
+    final int empty = 100 - filled;
+    final valStr = _factorValue(key, value);
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(bottom: 7),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            children: [
+              pw.Expanded(
+                child: pw.Text(
+                  _factorLabel(l, key),
+                  style: pw.TextStyle(
+                    fontSize: 9.5,
+                    color: _Palette.deep,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (valStr.isNotEmpty)
+                pw.Text(
+                  valStr,
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    color: _Palette.muted,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+          pw.SizedBox(height: 3),
+          pw.ClipRRect(
+            horizontalRadius: 3,
+            verticalRadius: 3,
+            child: pw.Row(
+              children: [
+                pw.Expanded(
+                  flex: filled,
+                  child: pw.Container(height: 6, color: color),
+                ),
+                if (empty > 0)
+                  pw.Expanded(
+                    flex: empty,
+                    child: pw.Container(height: 6, color: _Palette.surface),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _factorLabel(AppLocalizations l, String key) {
+    switch (key) {
+      case 'day_temp':
+        return l.factorDayTemp;
+      case 'day_hum':
+        return l.factorDayHum;
+      case 'day_rain':
+        return l.factorDayRain;
+      case 'day_quality':
+        return l.factorDayQuality;
+      case 'day_age':
+        return l.factorDayAge;
+      case 'stress_score':
+        return l.factorStressScore;
+      case 'heat_index':
+        return l.factorHeatIndex;
+      case 'temp_hum_ratio':
+        return l.factorTempHumRatio;
+      default:
+        return key.replaceAll('_', ' ');
+    }
+  }
+
+  static String _factorValue(String key, double? value) {
+    if (value == null) return '';
+    if (key == 'day_quality') {
+      final s = value.round().clamp(1, 4);
+      return 'T${5 - s}';
+    }
+    return value == value.roundToDouble()
+        ? value.toStringAsFixed(0)
+        : value.toStringAsFixed(1);
+  }
+
+  // ── Expert recommendations ──────────────────────────────────────────────
+  static pw.Widget _insightsSection(
+      AppLocalizations l, List<Recommendation> insights) {
+    return _surfaceCard(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(l.pdfExpertRec,
+              suffix: l.resInsightCount(insights.length)),
           pw.SizedBox(height: 8),
           ...insights.asMap().entries.map((e) {
             final isLast = e.key == insights.length - 1;
-            return _insightRow(e.value, isLast);
+            return _insightRow(l, e.value, isLast);
           }),
         ],
       ),
     );
   }
 
-  static pw.Widget _insightRow(Recommendation r, bool isLast) {
+  static pw.Widget _insightRow(
+      AppLocalizations l, Recommendation r, bool isLast) {
     return pw.Container(
       margin: pw.EdgeInsets.only(bottom: isLast ? 0 : 6),
       padding: const pw.EdgeInsets.fromLTRB(10, 8, 10, 8),
@@ -645,7 +825,7 @@ class PdfReportService {
                     fontSize: 10,
                     color: _Palette.deep,
                     fontWeight: pw.FontWeight.bold,
-                    letterSpacing: 0.3,
+                    letterSpacing: _track(0.3),
                   ),
                 ),
               ),
@@ -659,15 +839,15 @@ class PdfReportService {
                 ),
                 child: pw.Text(
                   switch (r.priority) {
-                    RecPriority.high => 'HIGH',
-                    RecPriority.medium => 'MED',
-                    RecPriority.low => 'LOW',
+                    RecPriority.high => l.resPriHigh,
+                    RecPriority.medium => l.resPriMed,
+                    RecPriority.low => l.resPriLow,
                   },
                   style: pw.TextStyle(
                     color: PdfColors.white,
                     fontSize: 7.5,
                     fontWeight: pw.FontWeight.bold,
-                    letterSpacing: 0.6,
+                    letterSpacing: _track(0.6),
                   ),
                 ),
               ),
@@ -685,7 +865,7 @@ class PdfReportService {
           if (r.evidence != null) ...[
             pw.SizedBox(height: 4),
             pw.Text(
-              'Evidence: ${r.evidence!}',
+              l.pdfEvidence(r.evidence!),
               style: pw.TextStyle(
                 fontSize: 7.5,
                 color: _Palette.muted,
@@ -699,16 +879,17 @@ class PdfReportService {
   }
 
   // ── Action plan ─────────────────────────────────────────────────────────
-  static pw.Widget _actionPlan(List<dynamic> milestones, DateTime now) {
+  static pw.Widget _actionPlan(
+      AppLocalizations l, List<dynamic> milestones, DateTime now) {
     return _surfaceCard(
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _sectionTitle('HARVEST ACTION PLAN'),
+          _sectionTitle(l.resActionPlan),
           pw.SizedBox(height: 8),
           if (milestones.isEmpty)
             pw.Text(
-              'Batch already at T4 — not suitable for premium-grade processing. Send for residual recovery only.',
+              l.resT4NotSuitable,
               style: pw.TextStyle(
                 fontSize: 9.5,
                 color: const PdfColor.fromInt(0xFFB91C1C),
@@ -730,7 +911,7 @@ class PdfReportService {
                 if (dayM != null) {
                   final d = int.parse(dayM.group(1)!);
                   when = d <= 0
-                      ? 'today'
+                      ? l.resToday
                       : DateFormat('d MMM').format(now.add(Duration(days: d)));
                 }
                 final tierC = _Palette.tier(tier);
@@ -752,7 +933,7 @@ class PdfReportService {
                       _tierBadge(tier, big: false),
                       pw.SizedBox(width: 6),
                       pw.Text(
-                        'before $when',
+                        l.pdfBefore(when),
                         style: pw.TextStyle(
                           fontSize: 9.5,
                           color: _Palette.deep,
@@ -770,24 +951,24 @@ class PdfReportService {
   }
 
   // ── Current field conditions ────────────────────────────────────────────
-  static pw.Widget _fieldConditions(
-      String place, String temp, String hum, String rain) {
+  static pw.Widget _fieldConditions(AppLocalizations l, String place,
+      String temp, String hum, String rain) {
     return _surfaceCard(
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _sectionTitle('CURRENT FIELD CONDITIONS', suffix: place),
+          _sectionTitle(l.resFieldConditions, suffix: place),
           pw.SizedBox(height: 8),
           pw.Row(
             children: [
-              _weatherStat('Temperature', temp,
+              _weatherStat(l.resTemperature, temp,
                   const PdfColor.fromInt(0xFFD9534F)),
               pw.SizedBox(width: 8),
               _weatherStat(
-                  'Humidity', hum, const PdfColor.fromInt(0xFF3B82F6)),
+                  l.homeHumidity, hum, const PdfColor.fromInt(0xFF3B82F6)),
               pw.SizedBox(width: 8),
               _weatherStat(
-                  'Rainfall', rain, const PdfColor.fromInt(0xFF6B7280)),
+                  l.resRainfall, rain, const PdfColor.fromInt(0xFF6B7280)),
             ],
           ),
         ],
@@ -815,7 +996,7 @@ class PdfReportService {
               style: pw.TextStyle(
                 fontSize: 7.5,
                 color: _Palette.muted,
-                letterSpacing: 1.2,
+                letterSpacing: _track(1.2),
                 fontWeight: pw.FontWeight.bold,
               ),
             ),
@@ -835,12 +1016,12 @@ class PdfReportService {
   }
 
   // ── Optional leaf sample image ──────────────────────────────────────────
-  static pw.Widget _leafSample(Uint8List imgBytes) {
+  static pw.Widget _leafSample(AppLocalizations l, Uint8List imgBytes) {
     return _surfaceCard(
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          _sectionTitle('LEAF SAMPLE'),
+          _sectionTitle(l.pdfLeafSample),
           pw.SizedBox(height: 8),
           pw.Center(
             child: pw.ClipRRect(
@@ -859,7 +1040,7 @@ class PdfReportService {
   }
 
   // ── Footer band ─────────────────────────────────────────────────────────
-  static pw.Widget _footer(String ts) {
+  static pw.Widget _footer(AppLocalizations l, String ts) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: pw.BoxDecoration(
@@ -869,12 +1050,12 @@ class PdfReportService {
       child: pw.Row(
         children: [
           pw.Text(
-            'Generated by TeaOptima · Quality Forecast Engine',
+            l.pdfFooter,
             style: pw.TextStyle(
               fontSize: 8,
               color: _Palette.primary,
               fontWeight: pw.FontWeight.bold,
-              letterSpacing: 0.6,
+              letterSpacing: _track(0.6),
             ),
           ),
           pw.Spacer(),
@@ -922,7 +1103,7 @@ class PdfReportService {
               fontSize: 8.5,
               color: _Palette.primary,
               fontWeight: pw.FontWeight.bold,
-              letterSpacing: 1.4,
+              letterSpacing: _track(1.4),
             ),
           ),
         ),
@@ -958,14 +1139,63 @@ class PdfReportService {
           color: PdfColors.white,
           fontSize: big ? 13 : 8.5,
           fontWeight: pw.FontWeight.bold,
-          letterSpacing: 0.4,
+          letterSpacing: _track(0.4),
         ),
       ),
     );
   }
 
+  static double? _track(double v) => _noTracking ? null : v;
+
   static String _short(String t) =>
       RegExp(r'T[1-4]').firstMatch(t)?.group(0) ?? '—';
+
+  // Build a PDF theme whose fonts cover the export language's script, loaded
+  // from bundled assets so reports render fully offline. For Sinhala/Tamil the
+  // script font is the base (and bold), giving proper weights, with Noto Sans
+  // as a fallback for any Latin/symbol glyphs. English keeps the built-in font.
+  static Future<pw.ThemeData?> _localeTheme(String lang) async {
+    try {
+      final String basePath, boldPath;
+      if (lang == 'si') {
+        basePath = 'assets/fonts/NotoSansSinhala-Regular.ttf';
+        boldPath = 'assets/fonts/NotoSansSinhala-Bold.ttf';
+      } else if (lang == 'ta') {
+        basePath = 'assets/fonts/NotoSansTamil-Regular.ttf';
+        boldPath = 'assets/fonts/NotoSansTamil-Bold.ttf';
+      } else {
+        return null; // English → built-in Latin font is sufficient
+      }
+      final latinFallback =
+          pw.Font.ttf(await rootBundle.load('assets/fonts/NotoSans-Regular.ttf'));
+      return pw.ThemeData.withFont(
+        base: pw.Font.ttf(await rootBundle.load(basePath)),
+        bold: pw.Font.ttf(await rootBundle.load(boldPath)),
+        fontFallback: [latinFallback],
+      );
+    } catch (_) {
+      return null; // asset missing / load failure → default theme (no crash)
+    }
+  }
+
+  static String _pdfLevelLabel(AppLocalizations l, String level) {
+    switch (level) {
+      case 'PAST PRIME':
+        return l.urgLevelPastPrime;
+      case 'STABLE':
+        return l.urgLevelStable;
+      case 'CRITICAL':
+        return l.urgLevelCritical;
+      case 'HIGH':
+        return l.urgLevelHigh;
+      case 'MODERATE':
+        return l.urgLevelModerate;
+      case 'COMFORTABLE':
+        return l.urgLevelComfortable;
+      default:
+        return l.urgLevelUnknown;
+    }
+  }
 }
 
 // ── derived helpers ───────────────────────────────────────────────────────
@@ -988,14 +1218,15 @@ class _Urgency {
     this.toTier,
   });
 
-  static _Urgency from(List<dynamic> timeline, String startTier) {
+  static _Urgency from(
+      List<dynamic> timeline, String startTier, AppLocalizations l) {
     final startM = RegExp(r'T([1-4])').firstMatch(startTier);
     if (startM == null || timeline.isEmpty) {
-      return const _Urgency(
+      return _Urgency(
         level: 'UNKNOWN',
-        headline: 'INSUFFICIENT DATA',
-        subline: 'Unable to compute harvest urgency.',
-        gradient: [
+        headline: l.urgHeadInsufficient,
+        subline: l.urgSubInsufficient,
+        gradient: const [
           PdfColor.fromInt(0xFF4B5563),
           PdfColor.fromInt(0xFF6B7280),
         ],
@@ -1003,11 +1234,11 @@ class _Urgency {
     }
     final startT = int.parse(startM.group(1)!);
     if (startT == 4) {
-      return const _Urgency(
+      return _Urgency(
         level: 'PAST PRIME',
-        headline: 'PROCESS IMMEDIATELY',
-        subline: 'Leaf has reached T4. Send to factory today.',
-        gradient: [
+        headline: l.urgHeadProcessNow,
+        subline: l.urgSubProcessNow,
+        gradient: const [
           PdfColor.fromInt(0xFF3F1D38),
           PdfColor.fromInt(0xFFB91C1C),
         ],
@@ -1031,9 +1262,8 @@ class _Urgency {
     if (dropDay == null || dropScore == null) {
       return _Urgency(
         level: 'STABLE',
-        headline: 'QUALITY HOLDING',
-        subline:
-            'Leaf projected to retain T$startT grade across the 15-day window.',
+        headline: l.urgHeadHolding,
+        subline: l.urgSubHolding('T$startT'),
         gradient: const [
           PdfColor.fromInt(0xFF064E3B),
           PdfColor.fromInt(0xFF10B981),
@@ -1046,39 +1276,37 @@ class _Urgency {
     List<PdfColor> gradient;
     if (dropDay <= 1) {
       level = 'CRITICAL';
-      headline = 'HARVEST TODAY';
+      headline = l.urgHeadToday;
       gradient = const [
         PdfColor.fromInt(0xFF7F1D1D),
         PdfColor.fromInt(0xFFEA580C),
       ];
     } else if (dropDay <= 3) {
       level = 'HIGH';
-      headline = 'HARVEST WITHIN $dropDay DAYS';
+      headline = l.urgHeadWithin(dropDay);
       gradient = const [
         PdfColor.fromInt(0xFFB45309),
         PdfColor.fromInt(0xFFF59E0B),
       ];
     } else if (dropDay <= 7) {
       level = 'MODERATE';
-      headline = 'PLAN HARVEST IN $dropDay DAYS';
+      headline = l.urgHeadPlan(dropDay);
       gradient = const [
         PdfColor.fromInt(0xFF166534),
         PdfColor.fromInt(0xFFEAB308),
       ];
     } else {
       level = 'COMFORTABLE';
-      headline = '$dropDay-DAY HARVEST WINDOW';
+      headline = l.urgHeadWindow(dropDay);
       gradient = const [
         PdfColor.fromInt(0xFF064E3B),
         PdfColor.fromInt(0xFF22C55E),
       ];
     }
-    final dayWord = dropDay == 1 ? 'day' : 'days';
     return _Urgency(
       level: level,
       headline: headline,
-      subline:
-          'Leaf grade is projected to drop from T$startT to $toTier in $dropDay $dayWord.',
+      subline: l.urgSubDrop(dropDay, 'T$startT', toTier),
       gradient: gradient,
       dropDay: dropDay,
       fromTier: 'T$startT',
@@ -1104,8 +1332,8 @@ class _Impact {
     required this.pitch,
   });
 
-  static _Impact from(
-      _Urgency u, Map<String, double> prices, double batchKg) {
+  static _Impact from(_Urgency u, Map<String, double> prices, double batchKg,
+      AppLocalizations l, NumberFormat money) {
     final from = u.fromTier;
     final to = u.toTier ?? u.fromTier;
     final fromPrice = from == null ? 0.0 : (prices[from] ?? 0.0);
@@ -1115,8 +1343,9 @@ class _Impact {
     final showSavings =
         u.level != 'STABLE' && u.level != 'PAST PRIME' && perKg > 0;
     final pitch = u.level == 'PAST PRIME'
-        ? 'Batch already at minimum grade. Process today to lock in residual value.'
-        : 'Quality projected to hold. Full batch value preserved across the window.';
+        ? l.econPitchExpired
+        : l.econPitchStable(
+            u.fromTier ?? '', money.format(fromPrice * batchKg));
     return _Impact(
       perKg: perKg,
       totalAtRisk: total,

@@ -1,6 +1,8 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/config_service.dart';
+import 'services/locale_controller.dart';
 
 import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
@@ -31,6 +34,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Load the user's saved app language (English / Sinhala / Tamil)
+  await LocaleController.load();
+
   final prefs = await SharedPreferences.getInstance();
   final onboardingCompleted = prefs.getBool("onboardingCompleted") ?? false;
 
@@ -39,59 +45,73 @@ void main() async {
 
 class TeaQualityApp extends StatelessWidget {
   final bool showOnboarding;
-  const TeaQualityApp({Key? key, required this.showOnboarding})
-      : super(key: key);
+  const TeaQualityApp({super.key, required this.showOnboarding});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Tea Leaf Quality App',
-      theme: ThemeData(primarySwatch: Colors.green),
+    // Rebuild the whole app when the language changes.
+    return ValueListenableBuilder<Locale>(
+      valueListenable: LocaleController.locale,
+      builder: (context, locale, _) {
+        return MaterialApp(
+          title: 'TeaOptima',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(primarySwatch: Colors.green),
 
-      // ① If onboarding not done, show it first
-      home: showOnboarding
-          ? OnboardingScreen(
-              onComplete: () async {
-                // Mark onboarding done
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('onboardingCompleted', true);
+          // ── Localization ──
+          locale: locale,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
 
-                // Replace with a fresh TeaQualityApp without onboarding
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (_) => const TeaQualityApp(showOnboarding: false),
-                  ),
-                  (route) => false,
-                );
-              },
-            )
+          // ① If onboarding not done, show it first
+          home: showOnboarding
+              ? OnboardingScreen(
+                  onComplete: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('onboardingCompleted', true);
 
-          // ② Else show login or main based on auth state
-          : StreamBuilder<User?>(
-              stream: AuthService.userChanges,
-              builder: (ctx, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const LoadingScreen(message: "Loading...");
-                }
-                if (!snapshot.hasData) {
-                  return const LoginScreen();
-                }
-                return const MainScreen();
-              },
-            ),
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const TeaQualityApp(showOnboarding: false),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                )
 
-      // Named routes for everything else
-      routes: {
-        '/login': (_) =>  LoginScreen(),
-        '/register': (_) =>  RegisterScreen(),
-        '/forgot': (_) =>  ForgotPasswordScreen(),
-        '/main': (_) =>  MainScreen(),
-        '/home': (_) =>  HomeScreen(),
-        '/capture': (_) =>  CaptureScreen(),
-        '/result': (_) =>  ResultScreen(),
-        '/history': (_) =>  HistoryScreen(),
-        '/profile': (_) =>  ProfileScreen(),
+              // ② Else show login or main based on auth state
+              : StreamBuilder<User?>(
+                  stream: AuthService.userChanges,
+                  builder: (ctx, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const LoadingScreen(message: "Loading...");
+                    }
+                    if (!snapshot.hasData) {
+                      return const LoginScreen();
+                    }
+                    return const MainScreen();
+                  },
+                ),
 
+          // Named routes for everything else
+          routes: {
+            '/login': (_) => const LoginScreen(),
+            '/register': (_) => const RegisterScreen(),
+            '/forgot': (_) => const ForgotPasswordScreen(),
+            '/main': (_) => const MainScreen(),
+            '/home': (_) => const HomeScreen(),
+            '/capture': (_) => CaptureScreen(),
+            '/result': (_) => ResultScreen(),
+            '/history': (_) => const HistoryScreen(),
+            '/profile': (_) => const ProfileScreen(),
+          },
+        );
       },
     );
   }

@@ -63,16 +63,46 @@ class _LoadingScreenState extends State<LoadingScreen> {
       barrierDismissible: false, // Prevent dismissing by tapping outside
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Login Failed'),
-          content: Text(message),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          icon: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0xFFD9534F).withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.error_outline_rounded,
+                color: Color(0xFFD9534F), size: 28),
+          ),
+          title: const Text(
+            'Login Failed',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          content: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(height: 1.4),
+          ),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(); // Close dialog
-                // Go back to the previous screen (login screen)
-                Navigator.of(context).pop();
-              },
-              child: const Text('OK'),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1B5E3F),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Back to login
+                },
+                child: const Text('Try Again',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
             ),
           ],
         );
@@ -83,44 +113,71 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.green[50],
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 120,
-                  height: 120,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 8,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+      backgroundColor: const Color(0xFFF4F9F5),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF4F9F5), Color(0xFFEAF3EC)],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 110,
+                    height: 110,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 5,
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(Color(0xFF1B5E3F)),
+                      backgroundColor: const Color(0xFF1B5E3F).withOpacity(0.10),
+                    ),
                   ),
-                ),
-                SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: Icon(
-                    Icons.emoji_nature,
-                    size: 64,
-                    color: Colors.green,
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1B5E3F), Color(0xFF2E7D5B)],
+                      ),
+                    ),
+                    child: const Icon(Icons.eco_rounded,
+                        size: 38, color: Colors.white),
                   ),
-                ),
-              ],
-            ),
-            if (widget.message != null) ...[
-              const SizedBox(height: 24),
+                ],
+              ),
+              const SizedBox(height: 28),
               Text(
-                widget.message!,
-                style: const TextStyle(fontSize: 20, color: Colors.green),
+                widget.message ?? 'Working…',
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F3D2E),
+                ),
                 textAlign: TextAlign.center,
               ),
-            ]
-          ],
+              const SizedBox(height: 6),
+              Text(
+                'TeaOptima is analyzing your leaf',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-} 
+}

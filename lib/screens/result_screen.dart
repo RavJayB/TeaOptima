@@ -11,10 +11,12 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../services/api_service.dart';
 import '../services/pdf_report_service.dart';
 import '../services/pricing_service.dart';
 import '../services/recommendation_engine.dart';
+import '../services/locale_controller.dart';
 import 'main_screen.dart';
 
 class ResultScreen extends StatefulWidget {
@@ -33,6 +35,9 @@ class _ResultScreenState extends State<ResultScreen> {
 
   String infoLine = '';
   List<String> factors = [];
+  // Structured SHAP factors for the selected day: {key, value, contribution}.
+  // Positive contribution = protective; negative = speeds degradation.
+  List<Map<String, dynamic>> factorData = [];
 
   String place = 'Fetching…', temp = '--', hum = '--', rain = '--';
 
@@ -43,7 +48,8 @@ class _ResultScreenState extends State<ResultScreen> {
   Map<String, double> _prices = Map.from(PricingService.defaultPrices);
   double _batchKg = PricingService.defaultBatchKg;
 
-  final DateFormat _fmt = DateFormat('d MMM yyyy');
+  // month + year only — the ordinal day is prefixed separately in _dayToDate
+  final DateFormat _fmt = DateFormat('MMM yyyy');
   final NumberFormat _money =
       NumberFormat.currency(locale: 'en_LK', symbol: 'Rs ', decimalDigits: 0);
 
@@ -68,6 +74,9 @@ class _ResultScreenState extends State<ResultScreen> {
 
   Future<void> _sharePdf() async {
     if (_exporting || timeline.isEmpty) return;
+    final code = await _pickExportLanguage();
+    if (code == null) return; // user dismissed the picker
+    final l = lookupAppLocalizations(Locale(code));
     setState(() => _exporting = true);
     try {
       final leafAgeRaw = payload['leaf_age'] ?? payload['leafAge'] ?? 1;
@@ -80,6 +89,7 @@ class _ResultScreenState extends State<ResultScreen> {
       final terminal = timeline.last['tier'].toString();
 
       final bytes = await PdfReportService.generate(
+        l: l,
         timeline: timeline,
         milestones: milestones,
         startingQuality: startQual,
@@ -100,11 +110,136 @@ class _ResultScreenState extends State<ResultScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not export PDF: $e')),
+        SnackBar(content: Text(AppLocalizations.of(context).resPdfFailed('$e'))),
       );
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
+  }
+
+  // Ask which language the exported PDF should be rendered in. Independent of
+  // the in-app language so growers can share an English copy with the factory
+  // while reading the app in Sinhala/Tamil (or vice-versa).
+  Future<String?> _pickExportLanguage() {
+    final l = AppLocalizations.of(context);
+    return showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFF4F9F5),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: _teaSurface,
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: const Icon(Icons.translate_rounded,
+                          color: _teaPrimary, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l.pdfExportLanguage,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: _teaDeep,
+                            ),
+                          ),
+                          Text(
+                            l.pdfChooseLanguage,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ...LocaleController.supported.entries.map((e) {
+                  final isCurrent = e.key == LocaleController.currentCode;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => Navigator.pop(ctx, e.key),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isCurrent ? _teaPrimary : _teaBorder,
+                              width: isCurrent ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                e.value,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: _teaDeep,
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(
+                                isCurrent
+                                    ? Icons.check_circle_rounded
+                                    : Icons.chevron_right_rounded,
+                                color: isCurrent
+                                    ? _teaPrimary
+                                    : Colors.grey.shade400,
+                                size: isCurrent ? 20 : 22,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -174,8 +309,10 @@ class _ResultScreenState extends State<ResultScreen> {
           .collection('simulations')
           .add(doc);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('⚠️ Save failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context).resSaveFailed('$e'))));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -227,6 +364,14 @@ class _ResultScreenState extends State<ResultScreen> {
         .trim())
       .where((l) => l.isNotEmpty)
       .toList();
+
+    final rawFactors = t['factors'];
+    factorData = (rawFactors is List)
+        ? rawFactors
+            .whereType<Map>()
+            .map((m) => Map<String, dynamic>.from(m))
+            .toList()
+        : <Map<String, dynamic>>[];
   }
 
   Future<void> _getWeather() async {
@@ -260,6 +405,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     // stringify your incoming payload fields
     final leafAgeRaw   = payload['leaf_age'] ?? payload['leafAge']   ?? '--';
     final startQualRaw = payload['startingQuality'] ?? payload['quality'] ?? '--';
@@ -283,9 +429,9 @@ class _ResultScreenState extends State<ResultScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
-        title: const Text(
-          'Prediction Results',
-          style: TextStyle(
+        title: Text(
+          l.resTitle,
+          style: const TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 17,
             letterSpacing: 0.2,
@@ -333,9 +479,9 @@ class _ResultScreenState extends State<ResultScreen> {
                           const Icon(Icons.ios_share_rounded,
                               color: Colors.white, size: 15),
                         const SizedBox(width: 6),
-                        const Text(
-                          'REPORT',
-                          style: TextStyle(
+                        Text(
+                          l.resReport,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w800,
@@ -351,7 +497,7 @@ class _ResultScreenState extends State<ResultScreen> {
         ],
       ),
       body: timeline.isEmpty
-          ? const Center(child: Text('No timeline data'))
+          ? Center(child: Text(l.resNoTimeline))
           : Stack(
               children: [
                 _buildBody(leafAge, startQual, lastTier, lastDay, maxDay),
@@ -499,6 +645,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
   // ── Stat header card ────────────────────────────────────────────────────
   Widget _buildHeaderCard(String leafAge, String startQual) {
+    final l = AppLocalizations.of(context);
     return Container(
       decoration: _surfaceCard(),
       child: Padding(
@@ -508,21 +655,21 @@ class _ResultScreenState extends State<ResultScreen> {
             _headerStat(
               icon: Icons.location_on_rounded,
               iconColor: _teaPrimary,
-              label: 'LOCATION',
+              label: l.resLocation,
               value: place,
             ),
             _verticalDivider(),
             _headerStat(
               icon: Icons.energy_savings_leaf_rounded,
               iconColor: _teaMid,
-              label: 'LEAF AGE',
-              value: '$leafAge d',
+              label: l.resLeafAgeLabel,
+              value: '$leafAge ${l.histDayShort}',
             ),
             _verticalDivider(),
             _headerStat(
               icon: Icons.workspace_premium_rounded,
               iconColor: _tierColor(startQual),
-              label: 'STARTING',
+              label: l.resStarting,
               value: _tierShort(startQual),
             ),
           ],
@@ -578,6 +725,7 @@ class _ResultScreenState extends State<ResultScreen> {
   // ── Quality trajectory (chart + tier journey) ──────────────────────────
   Widget _buildJourneyCard(
       String startQual, String lastTier, int lastDay, int maxDay) {
+    final l = AppLocalizations.of(context);
     final startShort = _tierShort(startQual);
     final endShort = _tierShort(lastTier);
     final dropped = startShort != endShort;
@@ -591,7 +739,7 @@ class _ResultScreenState extends State<ResultScreen> {
           children: [
             _sectionHeading(
               Icons.show_chart_rounded,
-              'QUALITY TRAJECTORY',
+              l.resQualityTrajectory,
               trailing: Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 5),
@@ -602,7 +750,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${lastDay} DAY${lastDay == 1 ? '' : 'S'}',
+                  l.resDaysCount(lastDay),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
@@ -645,7 +793,8 @@ class _ResultScreenState extends State<ResultScreen> {
                         const SizedBox(width: 5),
                         Flexible(
                           child: Text(
-                            'by ${DateFormat('d MMM').format(DateTime.now().add(Duration(days: lastDay)))}',
+                            l.resByDate(DateFormat('d MMM').format(
+                                DateTime.now().add(Duration(days: lastDay)))),
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 11.5,
@@ -748,7 +897,8 @@ class _ResultScreenState extends State<ResultScreen> {
                       getTooltipItems: (spots) => spots
                           .map(
                             (spot) => LineTooltipItem(
-                              'Day ${spot.x.toInt()}  •  T${5 - spot.y.toInt()}',
+                              l.resChartTooltip(
+                                  spot.x.toInt(), 'T${5 - spot.y.toInt()}'),
                               const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
@@ -819,7 +969,7 @@ class _ResultScreenState extends State<ResultScreen> {
                       size: 12, color: Colors.grey.shade500),
                   const SizedBox(width: 4),
                   Text(
-                    'Tap any point to see day details',
+                    l.resTapPoint,
                     style: TextStyle(
                       fontSize: 10.5,
                       color: Colors.grey.shade600,
@@ -869,6 +1019,7 @@ class _ResultScreenState extends State<ResultScreen> {
     if (timeline.isEmpty || tappedIdx >= timeline.length) {
       return const SizedBox.shrink();
     }
+    final l = AppLocalizations.of(context);
     final t = timeline[tappedIdx];
     final tierLabel = (t['tier'] ?? '').toString();
     final tierShort = _tierShort(tierLabel);
@@ -887,7 +1038,7 @@ class _ResultScreenState extends State<ResultScreen> {
           children: [
             _sectionHeading(
               Icons.calendar_today_rounded,
-              'DAY DETAILS',
+              l.resDayDetails,
               trailing: Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 5),
@@ -934,9 +1085,9 @@ class _ResultScreenState extends State<ResultScreen> {
             const SizedBox(height: 14),
             const Divider(height: 1, color: _teaBorder),
             const SizedBox(height: 12),
-            const Text(
-              'WHAT DRIVES THIS PREDICTION',
-              style: TextStyle(
+            Text(
+              l.resWhatDrives,
+              style: const TextStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.4,
@@ -944,11 +1095,13 @@ class _ResultScreenState extends State<ResultScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            if (factors.isEmpty)
+            if (factorData.isNotEmpty)
+              ..._buildContributionBars(l)
+            else if (factors.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
-                  'No driver explanation available for this day.',
+                  l.resNoDriver,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade600,
@@ -1040,8 +1193,158 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
+  // ── SHAP contribution bars (full-forest, structured from backend) ────────
+  List<Widget> _buildContributionBars(AppLocalizations l) {
+    final maxAbs = factorData
+        .fold<double>(0.0, (m, f) {
+          final c = (f['contribution'] as num?)?.toDouble().abs() ?? 0.0;
+          return c > m ? c : m;
+        })
+        .clamp(1e-6, double.infinity);
+    return [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            _legendDot(_teaPrimary, l.factorProtects),
+            const SizedBox(width: 16),
+            _legendDot(const Color(0xFFB8843A), l.factorDegrades),
+          ],
+        ),
+      ),
+      ...factorData.map((f) => _buildContributionBar(l, f, maxAbs)),
+    ];
+  }
+
+  Widget _legendDot(Color c, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 9,
+          height: 9,
+          decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10.5,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContributionBar(
+      AppLocalizations l, Map<String, dynamic> f, double maxAbs) {
+    final key = (f['key'] ?? '').toString();
+    final contribution = (f['contribution'] as num?)?.toDouble() ?? 0.0;
+    final value = (f['value'] as num?)?.toDouble();
+    final degrading = contribution < 0;
+    final color = degrading ? const Color(0xFFB8843A) : _teaPrimary;
+    final frac = (contribution.abs() / maxAbs).clamp(0.0, 1.0);
+    final String valStr;
+    if (value == null) {
+      valStr = '';
+    } else if (key == 'day_quality') {
+      // day_quality is the internal score (4=T1 … 1=T4) — show the tier.
+      valStr = 'T${5 - value.round().clamp(1, 4)}';
+    } else if (value == value.roundToDouble()) {
+      valStr = value.toStringAsFixed(0);
+    } else {
+      valStr = value.toStringAsFixed(1);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 11),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                degrading
+                    ? Icons.trending_down_rounded
+                    : Icons.shield_rounded,
+                size: 14,
+                color: color,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _factorLabel(l, key),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: _teaDeep,
+                  ),
+                ),
+              ),
+              if (valStr.isNotEmpty)
+                Text(
+                  valStr,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Stack(
+              children: [
+                Container(height: 8, color: _teaSurface),
+                FractionallySizedBox(
+                  widthFactor: frac == 0 ? 0.012 : frac,
+                  child: Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [color, color.withOpacity(0.7)],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _factorLabel(AppLocalizations l, String key) {
+    switch (key) {
+      case 'day_temp':
+        return l.factorDayTemp;
+      case 'day_hum':
+        return l.factorDayHum;
+      case 'day_rain':
+        return l.factorDayRain;
+      case 'day_quality':
+        return l.factorDayQuality;
+      case 'day_age':
+        return l.factorDayAge;
+      case 'stress_score':
+        return l.factorStressScore;
+      case 'heat_index':
+        return l.factorHeatIndex;
+      case 'temp_hum_ratio':
+        return l.factorTempHumRatio;
+      default:
+        return key.replaceAll('_', ' ');
+    }
+  }
+
   // ── Harvest action plan ─────────────────────────────────────────────────
   Widget _buildSuggestionsCard() {
+    final l = AppLocalizations.of(context);
     return Container(
       decoration: _surfaceCard(),
       child: Padding(
@@ -1050,7 +1353,7 @@ class _ResultScreenState extends State<ResultScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sectionHeading(
-                Icons.checklist_rounded, 'HARVEST ACTION PLAN'),
+                Icons.checklist_rounded, l.resActionPlan),
             const SizedBox(height: 14),
             if (milestones.isEmpty)
               Container(
@@ -1067,7 +1370,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Batch is already at T4 (Poor). Not suitable for premium-grade processing — send for residual recovery only.',
+                        l.resT4NotSuitable,
                         style: TextStyle(
                           color: const Color(0xFFB91C1C),
                           fontSize: 12.5,
@@ -1091,6 +1394,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   Widget _buildMilestoneStep(dynamic m, bool isLast) {
+    final l = AppLocalizations.of(context);
     var rec = (m['recommendation'] ?? '').toString().replaceAll('**', '');
     String dateStr = '';
     String tierKeep = '';
@@ -1098,7 +1402,7 @@ class _ResultScreenState extends State<ResultScreen> {
     final dayMatch = RegExp(r'day (-?\d+)').firstMatch(rec.toLowerCase());
     if (dayMatch != null) {
       final d = int.parse(dayMatch.group(1)!);
-      dateStr = d <= 0 ? 'today' : _dayToDate(d);
+      dateStr = d <= 0 ? l.resToday : _dayToDate(d);
     }
     final tierMatch = RegExp(r'T[1-4]').firstMatch(rec);
     if (tierMatch != null) tierKeep = tierMatch.group(0)!;
@@ -1152,8 +1456,8 @@ class _ResultScreenState extends State<ResultScreen> {
                 children: [
                   Text(
                     tierKeep.isEmpty
-                        ? 'Keep current grade'
-                        : 'Lock in $tierKeep grade',
+                        ? l.resKeepGrade
+                        : l.resLockGrade(tierKeep),
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -1170,7 +1474,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         child: Text(
                           dateStr.isEmpty
                               ? rec
-                              : 'Harvest before $dateStr',
+                              : l.resHarvestBefore(dateStr),
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
@@ -1192,6 +1496,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
   // ── Current field conditions ────────────────────────────────────────────
   Widget _buildWeatherCard() {
+    final l = AppLocalizations.of(context);
     return Container(
       decoration: _surfaceCard(),
       child: Padding(
@@ -1201,7 +1506,7 @@ class _ResultScreenState extends State<ResultScreen> {
           children: [
             _sectionHeading(
               Icons.cloud_rounded,
-              'CURRENT FIELD CONDITIONS',
+              l.resFieldConditions,
               trailing: (place != 'Fetching…' && place != '--')
                   ? Flexible(
                       child: Text(
@@ -1220,12 +1525,12 @@ class _ResultScreenState extends State<ResultScreen> {
             Row(
               children: [
                 _weatherStatCard(Icons.thermostat_rounded,
-                    'Temperature', temp, const Color(0xFFD9534F)),
+                    l.resTemperature, temp, const Color(0xFFD9534F)),
                 const SizedBox(width: 8),
-                _weatherStatCard(Icons.water_drop_rounded, 'Humidity',
+                _weatherStatCard(Icons.water_drop_rounded, l.homeHumidity,
                     hum, const Color(0xFF3B82F6)),
                 const SizedBox(width: 8),
-                _weatherStatCard(Icons.umbrella_rounded, 'Rainfall', rain,
+                _weatherStatCard(Icons.umbrella_rounded, l.resRainfall, rain,
                     const Color(0xFF6B7280)),
               ],
             ),
@@ -1285,6 +1590,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
   // ── AI insights (rule-based expert system) ─────────────────────────────
   Widget _buildInsightsCard() {
+    final l = AppLocalizations.of(context);
     final leafAgeRaw = payload['leaf_age'] ?? payload['leafAge'] ?? 1;
     final leafAge = (leafAgeRaw is num)
         ? leafAgeRaw.toInt()
@@ -1293,6 +1599,7 @@ class _ResultScreenState extends State<ResultScreen> {
         (payload['startingQuality'] ?? payload['quality'] ?? '').toString();
 
     final recs = RecommendationEngine.generate(
+      l: l,
       timeline: timeline,
       milestones: milestones,
       startingQuality: startQual,
@@ -1312,7 +1619,7 @@ class _ResultScreenState extends State<ResultScreen> {
           children: [
             _sectionHeading(
               Icons.auto_awesome_rounded,
-              'AI INSIGHTS',
+              l.resAiInsights,
               trailing: Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 4),
@@ -1336,7 +1643,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         color: Colors.white, size: 12),
                     const SizedBox(width: 4),
                     Text(
-                      '${recs.length} INSIGHT${recs.length == 1 ? '' : 'S'}',
+                      l.resInsightCount(recs.length),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -1363,7 +1670,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Domain-aware guidance synthesised from forecast, leaf state and Sri Lankan tea agronomy.',
+                      l.resInsightsBlurb,
                       style: TextStyle(
                         fontSize: 11,
                         color: _teaPrimary,
@@ -1386,15 +1693,16 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   Widget _buildInsightRow(Recommendation r, bool isLast) {
+    final l = AppLocalizations.of(context);
     final priorityColor = switch (r.priority) {
       RecPriority.high => const Color(0xFFD9534F),
       RecPriority.medium => const Color(0xFFD4A82C),
       RecPriority.low => _teaMid,
     };
     final priorityLabel = switch (r.priority) {
-      RecPriority.high => 'HIGH',
-      RecPriority.medium => 'MED',
-      RecPriority.low => 'LOW',
+      RecPriority.high => l.resPriHigh,
+      RecPriority.medium => l.resPriMed,
+      RecPriority.low => l.resPriLow,
     };
 
     return Padding(
@@ -1524,6 +1832,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
   // ── Sticky bottom CTA ───────────────────────────────────────────────────
   Widget _buildBottomCta() {
+    final l = AppLocalizations.of(context);
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFFEAF3EC),
@@ -1561,17 +1870,17 @@ class _ResultScreenState extends State<ResultScreen> {
                     builder: (_) => const MainScreen(startingIndex: 1),
                   ),
                 ),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 14),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.camera_alt_rounded,
+                      const Icon(Icons.camera_alt_rounded,
                           color: Colors.white, size: 19),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
-                        'Capture Another Sample',
-                        style: TextStyle(
+                        l.resCaptureAnother,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
                           fontSize: 15,
@@ -1593,12 +1902,13 @@ class _ResultScreenState extends State<ResultScreen> {
   //  Harvest Urgency — domain-tailored hero card
   // ───────────────────────────────────────────────────────────────────────
   _UrgencyData _computeUrgency() {
-    const unknown = _UrgencyData(
+    final l = AppLocalizations.of(context);
+    final unknown = _UrgencyData(
       level: 'UNKNOWN',
-      headline: 'INSUFFICIENT DATA',
-      subline: 'Unable to compute harvest urgency for this leaf sample.',
+      headline: l.urgHeadInsufficient,
+      subline: l.urgSubInsufficient,
       icon: Icons.help_outline_rounded,
-      gradient: [Color(0xFF4B5563), Color(0xFF6B7280)],
+      gradient: const [Color(0xFF4B5563), Color(0xFF6B7280)],
       urgencyLevel: 0,
       progressLabel: '—',
     );
@@ -1615,19 +1925,18 @@ class _ResultScreenState extends State<ResultScreen> {
     final startTier = 'T$startT';
 
     if (startT == 4) {
-      return const _UrgencyData(
+      return _UrgencyData(
         level: 'PAST PRIME',
-        headline: 'PROCESS IMMEDIATELY',
-        subline:
-            'Leaf has already reached T4. Send to factory today — further delay accelerates value loss.',
+        headline: l.urgHeadProcessNow,
+        subline: l.urgSubProcessNow,
         icon: Icons.gpp_bad_rounded,
-        gradient: [
+        gradient: const [
           Color(0xFF3F1D38),
           Color(0xFF7C2D12),
           Color(0xFFB91C1C),
         ],
         urgencyLevel: 1.0,
-        progressLabel: 'No optimal window remaining',
+        progressLabel: l.urgProgNoWindow,
         fromTier: 'T4',
       );
     }
@@ -1648,9 +1957,8 @@ class _ResultScreenState extends State<ResultScreen> {
     if (dropDay == null || dropScore == null) {
       return _UrgencyData(
         level: 'STABLE',
-        headline: 'QUALITY HOLDING',
-        subline:
-            'Leaf projected to retain $startTier grade across the full 15-day window. Plan plucking at your operational convenience.',
+        headline: l.urgHeadHolding,
+        subline: l.urgSubHolding(startTier),
         icon: Icons.workspace_premium_rounded,
         gradient: const [
           Color(0xFF064E3B),
@@ -1658,7 +1966,7 @@ class _ResultScreenState extends State<ResultScreen> {
           Color(0xFF10B981),
         ],
         urgencyLevel: 0.0,
-        progressLabel: 'Full 15-day window open',
+        progressLabel: l.urgProgFullWindow,
         fromTier: startTier,
       );
     }
@@ -1674,7 +1982,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
     if (dropDay <= 1) {
       level = 'CRITICAL';
-      headline = 'HARVEST TODAY';
+      headline = l.urgHeadToday;
       gradient = const [
         Color(0xFF7F1D1D),
         Color(0xFFDC2626),
@@ -1683,7 +1991,7 @@ class _ResultScreenState extends State<ResultScreen> {
       icon = Icons.warning_amber_rounded;
     } else if (dropDay <= 3) {
       level = 'HIGH';
-      headline = 'HARVEST WITHIN $dropDay DAYS';
+      headline = l.urgHeadWithin(dropDay);
       gradient = const [
         Color(0xFFB45309),
         Color(0xFFD97706),
@@ -1692,7 +2000,7 @@ class _ResultScreenState extends State<ResultScreen> {
       icon = Icons.local_fire_department_rounded;
     } else if (dropDay <= 7) {
       level = 'MODERATE';
-      headline = 'PLAN HARVEST IN $dropDay DAYS';
+      headline = l.urgHeadPlan(dropDay);
       gradient = const [
         Color(0xFF166534),
         Color(0xFFCA8A04),
@@ -1701,7 +2009,7 @@ class _ResultScreenState extends State<ResultScreen> {
       icon = Icons.hourglass_top_rounded;
     } else {
       level = 'COMFORTABLE';
-      headline = '$dropDay-DAY HARVEST WINDOW';
+      headline = l.urgHeadWindow(dropDay);
       gradient = const [
         Color(0xFF064E3B),
         Color(0xFF047857),
@@ -1710,12 +2018,10 @@ class _ResultScreenState extends State<ResultScreen> {
       icon = Icons.eco_rounded;
     }
 
-    final dayWord = dropDay == 1 ? 'day' : 'days';
     return _UrgencyData(
       level: level,
       headline: headline,
-      subline:
-          'Leaf grade is projected to drop from $startTier to $toTier in $dropDay $dayWord. Pluck before then to preserve premium value.',
+      subline: l.urgSubDrop(dropDay, startTier, toTier),
       icon: icon,
       gradient: gradient,
       daysUntilDrop: dropDay,
@@ -1723,11 +2029,31 @@ class _ResultScreenState extends State<ResultScreen> {
       toTier: toTier,
       dropDate: dropDate,
       urgencyLevel: urgency,
-      progressLabel: '$dropDay $dayWord of optimal plucking window left',
+      progressLabel: l.urgProgLeft(dropDay),
     );
   }
 
+  String _levelLabel(AppLocalizations l, String level) {
+    switch (level) {
+      case 'PAST PRIME':
+        return l.urgLevelPastPrime;
+      case 'STABLE':
+        return l.urgLevelStable;
+      case 'CRITICAL':
+        return l.urgLevelCritical;
+      case 'HIGH':
+        return l.urgLevelHigh;
+      case 'MODERATE':
+        return l.urgLevelModerate;
+      case 'COMFORTABLE':
+        return l.urgLevelComfortable;
+      default:
+        return l.urgLevelUnknown;
+    }
+  }
+
   Widget _buildUrgencyCard() {
+    final l = AppLocalizations.of(context);
     final u = _computeUrgency();
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
@@ -1791,9 +2117,9 @@ class _ResultScreenState extends State<ResultScreen> {
                         child: Icon(u.icon, color: Colors.white, size: 20),
                       ),
                       const SizedBox(width: 10),
-                      const Text(
-                        'HARVEST URGENCY',
-                        style: TextStyle(
+                      Text(
+                        l.urgTitle,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -1813,7 +2139,7 @@ class _ResultScreenState extends State<ResultScreen> {
                           ),
                         ),
                         child: Text(
-                          u.level,
+                          _levelLabel(l, u.level),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -1846,7 +2172,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              u.daysUntilDrop == 1 ? 'DAY' : 'DAYS',
+                              l.urgDayUnit(u.daysUntilDrop!),
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.85),
                                 fontSize: 11,
@@ -2043,6 +2369,7 @@ class _ResultScreenState extends State<ResultScreen> {
   //  Economic Impact — value preserved by harvesting before the drop
   // ───────────────────────────────────────────────────────────────────────
   _ImpactData _computeImpact() {
+    final l = AppLocalizations.of(context);
     final u = _computeUrgency();
 
     final startTier = u.fromTier;
@@ -2057,15 +2384,13 @@ class _ResultScreenState extends State<ResultScreen> {
 
     String pitch;
     if (u.level == 'PAST PRIME') {
-      pitch =
-          'Batch already at minimum grade. Process today to lock in residual value.';
+      pitch = l.econPitchExpired;
     } else if (u.level == 'STABLE' || u.toTier == null || perKg == 0) {
       pitch =
-          'Quality projected to hold $startTier grade. Full ${_money.format(totalCurrentValue)} value preserved across the 15-day window.';
+          l.econPitchStable(startTier ?? '', _money.format(totalCurrentValue));
     } else {
-      final dayWord = (u.daysUntilDrop ?? 0) == 1 ? 'day' : 'days';
-      pitch =
-          'Harvesting within ${u.daysUntilDrop} $dayWord preserves ${_money.format(perKg)}/kg vs. waiting for the $terminalTier drop.';
+      pitch = l.econPitchDrop(
+          u.daysUntilDrop ?? 0, _money.format(perKg), terminalTier ?? '');
     }
 
     return _ImpactData(
@@ -2082,6 +2407,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   Widget _buildImpactCard() {
+    final l = AppLocalizations.of(context);
     final d = _computeImpact();
 
     final gradient = d.isExpired
@@ -2154,9 +2480,9 @@ class _ResultScreenState extends State<ResultScreen> {
                             color: Colors.white, size: 20),
                       ),
                       const SizedBox(width: 10),
-                      const Text(
-                        'ECONOMIC IMPACT',
-                        style: TextStyle(
+                      Text(
+                        l.econTitle,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -2179,13 +2505,13 @@ class _ResultScreenState extends State<ResultScreen> {
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.tune_rounded,
+                            children: [
+                              const Icon(Icons.tune_rounded,
                                   color: Colors.white, size: 13),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
-                                'RATES',
-                                style: TextStyle(
+                                l.econRates,
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
@@ -2210,7 +2536,7 @@ class _ResultScreenState extends State<ResultScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'PRESERVE',
+                              l.econPreserve,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.85),
                                 fontSize: 10,
@@ -2252,9 +2578,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     )
                   else
                     Text(
-                      d.isExpired
-                          ? 'AT MINIMUM GRADE'
-                          : 'NO VALUE LOSS PROJECTED',
+                      d.isExpired ? l.econAtMinGrade : l.econNoLoss,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
@@ -2294,7 +2618,7 @@ class _ResultScreenState extends State<ResultScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'NOW',
+                                  l.econNow,
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.75),
                                     fontSize: 9.5,
@@ -2333,7 +2657,7 @@ class _ResultScreenState extends State<ResultScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'IF WAITED',
+                                  l.econIfWaited,
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.75),
                                     fontSize: 9.5,
@@ -2392,7 +2716,7 @@ class _ResultScreenState extends State<ResultScreen> {
                                     size: 16),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'BATCH',
+                                  l.econBatch,
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.85),
                                     fontSize: 10,
@@ -2436,7 +2760,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                showSavings ? 'AT RISK' : 'BATCH VALUE',
+                                showSavings ? l.econAtRisk : l.econBatchValue,
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.75),
                                   fontSize: 9.5,
@@ -2473,6 +2797,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
   // ── Price editor ────────────────────────────────────────────────────────
   Future<void> _openPriceEditor() async {
+    final l = AppLocalizations.of(context);
     final controllers = {
       for (final t in ['T1', 'T2', 'T3', 'T4'])
         t: TextEditingController(
@@ -2481,11 +2806,23 @@ class _ResultScreenState extends State<ResultScreen> {
         ),
     };
 
-    const tierMeta = {
-      'T1': ('Highest Quality', 'Premium / Select', Color(0xFF15803D)),
-      'T2': ('Good Quality', 'Standard plucking', Color(0xFF65A30D)),
-      'T3': ('Average Quality', 'Coarse / older leaf', Color(0xFFCA8A04)),
-      'T4': ('Poor Quality', 'Refuse / over-mature', Color(0xFFB91C1C)),
+    final tierLabel = {
+      'T1': l.tierHighest,
+      'T2': l.tierGood,
+      'T3': l.tierAverage,
+      'T4': l.tierPoor,
+    };
+    final tierDesc = {
+      'T1': l.prcDescT1,
+      'T2': l.prcDescT2,
+      'T3': l.prcDescT3,
+      'T4': l.prcDescT4,
+    };
+    const tierColor = {
+      'T1': Color(0xFF15803D),
+      'T2': Color(0xFF65A30D),
+      'T3': Color(0xFFCA8A04),
+      'T4': Color(0xFFB91C1C),
     };
 
     await showModalBottomSheet(
@@ -2539,7 +2876,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Factory Rate Card',
+                                l.factoryRateCard,
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
@@ -2548,7 +2885,7 @@ class _ResultScreenState extends State<ResultScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Set Rs/kg per quality tier — defaults are Colombo Auction averages.',
+                                l.prcRateCardSub,
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey.shade700,
@@ -2566,9 +2903,9 @@ class _ResultScreenState extends State<ResultScreen> {
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _priceField(
                           tier: tier,
-                          label: tierMeta[tier]!.$1,
-                          desc: tierMeta[tier]!.$2,
-                          accent: tierMeta[tier]!.$3,
+                          label: tierLabel[tier]!,
+                          desc: tierDesc[tier]!,
+                          accent: tierColor[tier]!,
                           controller: controllers[tier]!,
                         ),
                       ),
@@ -2587,7 +2924,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             },
                             icon: const Icon(Icons.restart_alt_rounded,
                                 size: 18),
-                            label: const Text('Reset'),
+                            label: Text(l.prcReset),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.grey.shade800,
                               side: BorderSide(color: Colors.grey.shade400),
@@ -2617,7 +2954,7 @@ class _ResultScreenState extends State<ResultScreen> {
                               Navigator.pop(ctx);
                             },
                             icon: const Icon(Icons.check_rounded, size: 18),
-                            label: const Text('Save Rates'),
+                            label: Text(l.prcSaveRates),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green.shade700,
                               foregroundColor: Colors.white,
@@ -2744,6 +3081,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
   // ── Batch size editor ───────────────────────────────────────────────────
   Future<void> _openBatchEditor() async {
+    final l = AppLocalizations.of(context);
     final ctrl = TextEditingController(
       text: _batchKg.toStringAsFixed(_batchKg % 1 == 0 ? 0 : 1),
     );
@@ -2759,7 +3097,7 @@ class _ResultScreenState extends State<ResultScreen> {
           children: [
             Icon(Icons.scale_rounded, color: Colors.green.shade700),
             const SizedBox(width: 8),
-            const Text('Batch Size'),
+            Text(l.batchTitle),
           ],
         ),
         content: Form(
@@ -2769,7 +3107,7 @@ class _ResultScreenState extends State<ResultScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Enter the plucked weight for this prediction batch.',
+                l.batchPrompt,
                 style: TextStyle(
                   fontSize: 12.5,
                   color: Colors.grey.shade700,
@@ -2799,9 +3137,9 @@ class _ResultScreenState extends State<ResultScreen> {
                 ),
                 validator: (v) {
                   final n = double.tryParse(v ?? '');
-                  if (n == null) return 'Enter a number';
-                  if (n <= 0) return 'Must be greater than 0';
-                  if (n > 100000) return 'Too large';
+                  if (n == null) return l.batchErrNumber;
+                  if (n <= 0) return l.batchErrPositive;
+                  if (n > 100000) return l.batchErrTooLarge;
                   return null;
                 },
               ),
@@ -2827,7 +3165,7 @@ class _ResultScreenState extends State<ResultScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(l.commonCancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -2845,7 +3183,7 @@ class _ResultScreenState extends State<ResultScreen> {
               setState(() => _batchKg = n);
               Navigator.pop(ctx);
             },
-            child: const Text('Save'),
+            child: Text(l.commonSave),
           ),
         ],
       ),

@@ -16,6 +16,7 @@
 //   • OP / BOPF orthodox = premium grades; CTC = bulk processing
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 enum RecPriority { high, medium, low }
 
@@ -51,6 +52,7 @@ class RecommendationEngine {
   static const int _maxRecs = 5;
 
   static List<Recommendation> generate({
+    required AppLocalizations l,
     required List<dynamic> timeline,
     required List<dynamic> milestones,
     required String startingQuality,
@@ -71,44 +73,39 @@ class RecommendationEngine {
       final String detail;
       if (drop.dropDay == 1) {
         pri = RecPriority.high;
-        title = 'PLUCK TODAY — GRADE DROPS TOMORROW';
-        detail =
-            'Leaf is forecast to fall from T${drop.fromT} to T${drop.toT} by tomorrow. Mobilise pluckers to this batch immediately to secure premium grade.';
+        title = l.recTimingTodayTitle;
+        detail = l.recTimingTodayDetail(drop.fromT, drop.toT);
       } else if (drop.dropDay <= 3) {
         pri = RecPriority.high;
-        title = 'HARVEST WITHIN ${drop.dropDay} DAYS';
-        detail =
-            'T${drop.fromT} → T${drop.toT} drop projected on day ${drop.dropDay}. Prioritise this section on your plucking roster.';
+        title = l.urgHeadWithin(drop.dropDay);
+        detail = l.recTimingSoonDetail(drop.fromT, drop.toT, drop.dropDay);
       } else if (drop.dropDay <= 7) {
         pri = RecPriority.medium;
-        title = 'PLAN HARVEST IN ${drop.dropDay} DAYS';
-        detail =
-            'Grade drop projected on day ${drop.dropDay}. Comfortable buffer — coordinate with factory intake schedule.';
+        title = l.urgHeadPlan(drop.dropDay);
+        detail = l.recTimingPlanDetail(drop.dropDay);
       } else {
         pri = RecPriority.low;
-        title = 'COMFORTABLE PLUCKING WINDOW';
-        detail =
-            'Quality projected to hold for ${drop.dropDay} days. Wait for optimal weather and labour availability.';
+        title = l.recTimingComfortTitle;
+        detail = l.recTimingComfortDetail(drop.dropDay);
       }
       recs.add(Recommendation(
         title: title,
         detail: detail,
-        evidence: 'Drop forecast: day ${drop.dropDay}',
+        evidence: l.recTimingEvidence(drop.dropDay),
         priority: pri,
         category: RecCategory.timing,
         icon: Icons.schedule_rounded,
         accent: const Color(0xFF1B5E3F),
       ));
     } else if (startT == 4) {
-      recs.add(const Recommendation(
-        title: 'PAST PRIME — PROCESS NOW',
-        detail:
-            'Leaf already at T4. Send to factory today for residual recovery; further delay risks total batch write-off.',
-        evidence: 'Starting grade: T4',
+      recs.add(Recommendation(
+        title: l.recPastPrimeTitle,
+        detail: l.recPastPrimeDetail,
+        evidence: l.recPastPrimeEvidence,
         priority: RecPriority.high,
         category: RecCategory.timing,
         icon: Icons.gpp_bad_rounded,
-        accent: Color(0xFFA04823),
+        accent: const Color(0xFFA04823),
       ));
     }
 
@@ -116,11 +113,10 @@ class RecommendationEngine {
     final heat = _findHeatRun(timeline, 30.0);
     if (heat != null && heat.length >= 2) {
       recs.add(Recommendation(
-        title: 'HEAT STRESS — PLUCK BEFORE 9 AM',
-        detail:
-            '${heat.length} consecutive days above 30 °C (days ${heat.startDay}–${heat.endDay}). Pluck in early morning to avoid wilt and bitter notes; shade collection baskets during transport.',
-        evidence:
-            'Avg ${heat.avg.toStringAsFixed(1)} °C, days ${heat.startDay}–${heat.endDay}',
+        title: l.recHeatTitle,
+        detail: l.recHeatDetail(heat.length, heat.startDay, heat.endDay),
+        evidence: l.recHeatEvidence(
+            heat.avg.toStringAsFixed(1), heat.startDay, heat.endDay),
         priority: heat.length >= 4 ? RecPriority.high : RecPriority.medium,
         category: RecCategory.weather,
         icon: Icons.local_fire_department_rounded,
@@ -132,10 +128,9 @@ class RecommendationEngine {
     final rain = _findRainSpike(timeline, 10.0);
     if (rain != null) {
       recs.add(Recommendation(
-        title: 'HEAVY RAIN ON DAY ${rain.day}',
-        detail:
-            '${rain.mm.toStringAsFixed(1)} mm forecast. Wet leaf bruises during transport and risks mould in withering troughs. Harvest before, or skip that day.',
-        evidence: '${rain.mm.toStringAsFixed(1)} mm, day ${rain.day}',
+        title: l.recRainTitle(rain.day),
+        detail: l.recRainDetail(rain.mm.toStringAsFixed(1)),
+        evidence: l.recRainEvidence(rain.mm.toStringAsFixed(1), rain.day),
         priority: rain.mm >= 20 ? RecPriority.high : RecPriority.medium,
         category: RecCategory.weather,
         icon: Icons.umbrella_rounded,
@@ -147,10 +142,9 @@ class RecommendationEngine {
     final hum = _findSustainedHumidity(timeline, 80.0, 3);
     if (hum != null) {
       recs.add(Recommendation(
-        title: 'PROLONGED HIGH HUMIDITY',
-        detail:
-            'Avg ${hum.avg.toStringAsFixed(0)} % humidity over ${hum.days} days accelerates field-fermentation. Reduce time-to-factory: transport plucked leaf within 4 hours.',
-        evidence: '${hum.avg.toStringAsFixed(0)} % hum, ${hum.days}-day run',
+        title: l.recHumTitle,
+        detail: l.recHumDetail(hum.avg.toStringAsFixed(0), hum.days),
+        evidence: l.recHumEvidence(hum.avg.toStringAsFixed(0), hum.days),
         priority: RecPriority.medium,
         category: RecCategory.weather,
         icon: Icons.water_drop_rounded,
@@ -161,10 +155,9 @@ class RecommendationEngine {
     // ── Rule 5: Leaf-age maturity (only the strong end of the spectrum)
     if (leafAge >= 6) {
       recs.add(Recommendation(
-        title: 'MATURE SHOOT — COARSER GRADE EXPECTED',
-        detail:
-            '$leafAge-day-old shoot. Heavier batch weight but coarser fibre. Suitable for CTC processing rather than orthodox premium grades.',
-        evidence: 'Shoot age: $leafAge days',
+        title: l.recMatureTitle,
+        detail: l.recMatureDetail(leafAge),
+        evidence: l.recMatureEvidence(leafAge),
         priority: RecPriority.low,
         category: RecCategory.quality,
         icon: Icons.eco_rounded,
@@ -172,10 +165,9 @@ class RecommendationEngine {
       ));
     } else if (leafAge <= 2 && startT <= 2) {
       recs.add(Recommendation(
-        title: 'YOUNG TENDER LEAF — PREMIUM POTENTIAL',
-        detail:
-            'Just $leafAge day${leafAge == 1 ? '' : 's'} old at T$startT. Ideal for orthodox OP / BOPF processing — target premium-grade buyers for best return.',
-        evidence: 'Shoot age: $leafAge days, T$startT start',
+        title: l.recYoungTitle,
+        detail: l.recYoungDetail(leafAge, startT),
+        evidence: l.recYoungEvidence(leafAge, startT),
         priority: RecPriority.low,
         category: RecCategory.quality,
         icon: Icons.spa_rounded,
@@ -186,10 +178,9 @@ class RecommendationEngine {
     // ── Rule 6: Plucking standard (only when at premium grades)
     if (startT == 1 || startT == 2) {
       recs.add(Recommendation(
-        title: 'MAINTAIN 2-LEAVES-AND-BUD STANDARD',
-        detail:
-            'Current T$startT grade reflects clean plucking. Train pluckers to reject over-mature 3rd leaves — they can downgrade the entire chest at factory intake.',
-        evidence: 'Starting grade: T$startT',
+        title: l.recTechniqueTitle,
+        detail: l.recTechniqueDetail(startT),
+        evidence: l.recTechniqueEvidence(startT),
         priority: RecPriority.low,
         category: RecCategory.technique,
         icon: Icons.task_alt_rounded,
@@ -208,11 +199,11 @@ class RecommendationEngine {
         final total = delta * batchKg;
         final batchStr = batchKg.toStringAsFixed(batchKg % 1 == 0 ? 0 : 1);
         recs.add(Recommendation(
-          title: 'Rs ${total.toStringAsFixed(0)} UPSIDE ON THIS BATCH',
-          detail:
-              'Acting before the drop preserves Rs ${delta.toStringAsFixed(0)}/kg × $batchStr kg = Rs ${total.toStringAsFixed(0)} at your saved factory rates.',
-          evidence:
-              '$fromKey (Rs ${fromPrice.toStringAsFixed(0)}) → $toKey (Rs ${toPrice.toStringAsFixed(0)})',
+          title: l.recEconTitle(total.toStringAsFixed(0)),
+          detail: l.recEconDetail(
+              delta.toStringAsFixed(0), batchStr, total.toStringAsFixed(0)),
+          evidence: l.recEconEvidence(fromKey, fromPrice.toStringAsFixed(0),
+              toKey, toPrice.toStringAsFixed(0)),
           priority: drop.dropDay <= 3 ? RecPriority.high : RecPriority.medium,
           category: RecCategory.economic,
           icon: Icons.payments_rounded,
