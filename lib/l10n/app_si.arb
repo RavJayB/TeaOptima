@@ -312,5 +312,20 @@
   "factorHeatIndex": "තාප සුචිය",
   "factorTempHumRatio": "උෂ්ණ–ආර්ද්‍රතා අනුපාතය",
   "factorProtects": "තත්ත්වය රකියි",
-  "factorDegrades": "විකෘතිය වේගවත් කරයි"
+  "factorDegrades": "විකෘතිය වේගවත් කරයි",
+
+  "authOr": "හෝ",
+  "authContinueGoogle": "Google සමඟ ඉදිරියට",
+  "authGoogleFailed": "Google පිවිසීම අසාර්ථකයි: {error}",
+  "verifyTitle": "ඔබේ විද්‍යුත් තැපෑල තහවුරු කරන්න",
+  "verifyBody": "{email} වෙත තහවුරු කිරීමේ සබැඳියක් එවා ඇත. එම සබැඳිය විවෘත කර, ආපසු පැමිණ පහත තට්ටු කරන්න.",
+  "verifyImVerified": "මම තහවුරු කළා — ඉදිරියට",
+  "verifyResend": "නැවත එවන්න",
+  "verifyResent": "තහවුරු කිරීමේ විද්‍යුත් තැපෑල එවන ලදී",
+  "verifyNotYet": "තවම තහවුරු කර නැත — ඔබේ එන ලිපි (සහ අයාචිත) පරීක්ෂා කරන්න",
+  "verifyUseAnother": "වෙනත් ගිණුමක් භාවිතා කරන්න",
+
+  "authErrEmailInUse": "මෙම විද්‍යුත් තැපෑල දැනටමත් ලියාපදිංචි කර ඇත.",
+  "authErrNetwork": "ජාල දෝෂයකි. ඔබේ සම්බන්ධතාවය පරීක්ෂා කරන්න.",
+  "authErrGeneric": "යම් දෝෂයක් ඇතිවිය. නැවත උත්සාහ කරන්න."
 }

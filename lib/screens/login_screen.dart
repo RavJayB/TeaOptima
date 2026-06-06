@@ -7,6 +7,7 @@ import '../theme/tea_theme.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 import 'main_screen.dart';
+import 'verify_email_screen.dart';
 import 'loading_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -41,15 +42,47 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           },
           onTaskComplete: (ctx) {
+            final verified = AuthService.isEmailVerified;
             Navigator.of(ctx).pushAndRemoveUntil(
               MaterialPageRoute(
-                  builder: (_) => const MainScreen(startingIndex: 0)),
+                builder: (_) => verified
+                    ? const MainScreen(startingIndex: 0)
+                    : const VerifyEmailScreen(),
+              ),
               (route) => false,
             );
           },
         ),
       ),
     );
+  }
+
+  Future<void> _google() async {
+    final l = AppLocalizations.of(context);
+    setState(() => _loading = true);
+    try {
+      final cred = await AuthService.signInWithGoogle();
+      if (cred == null) {
+        if (mounted) setState(() => _loading = false);
+        return; // user cancelled the Google chooser
+      }
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainScreen(startingIndex: 0)),
+        (route) => false,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l.authGoogleFailed('$e')),
+            backgroundColor: const Color(0xFFD9534F),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -139,7 +172,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 12),
                       _primaryButton(l),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 18),
+                      _orDivider(l),
+                      const SizedBox(height: 18),
+                      _googleButton(l),
+                      const SizedBox(height: 24),
                       RichText(
                         textAlign: TextAlign.center,
                         text: TextSpan(
@@ -277,6 +314,87 @@ class _LoginScreenState extends State<LoginScreen> {
               const Icon(Icons.arrow_forward_rounded,
                   color: Colors.white, size: 19),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _orDivider(AppLocalizations l) {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: TeaTheme.border, thickness: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            l.authOr,
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const Expanded(child: Divider(color: TeaTheme.border, thickness: 1)),
+      ],
+    );
+  }
+
+  Widget _googleButton(AppLocalizations l) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: _loading ? null : _google,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: TeaTheme.border),
+          ),
+          child: Center(
+            child: _loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2.4, color: TeaTheme.primary),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _googleGlyph(),
+                      const SizedBox(width: 10),
+                      Text(
+                        l.authContinueGoogle,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: TeaTheme.deep,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Placeholder "G" mark — swap for the official multicolor Google asset
+  // before Play Store release (branding-guideline compliance).
+  Widget _googleGlyph() {
+    return const SizedBox(
+      width: 22,
+      height: 22,
+      child: Center(
+        child: Text(
+          'G',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF4285F4),
           ),
         ),
       ),

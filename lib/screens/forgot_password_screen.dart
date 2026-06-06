@@ -41,7 +41,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$e'),
+            content: Text(
+                AuthService.friendlyAuthError(AppLocalizations.of(context), e)),
             backgroundColor: const Color(0xFFD9534F),
             behavior: SnackBarBehavior.floating,
           ),

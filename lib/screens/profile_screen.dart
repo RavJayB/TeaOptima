@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 
+import '../services/auth_service.dart';
 import '../services/locale_controller.dart';
 import '../theme/tea_theme.dart';
 import '../widgets/factory_rate_sheet.dart';
@@ -264,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
     if (confirmed != true) return;
-    await _auth.signOut();
+    await AuthService.signOut(); // signs out Firebase + Google
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/login');
   }

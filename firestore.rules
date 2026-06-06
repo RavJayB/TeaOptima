@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// TeaOptima Firestore security rules.
+// Every prediction document in `simulations` is owned by one user (its
+// `userId` field). Access is strictly owner-scoped; everything else is denied.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /simulations/{docId} {
+      // Create only your own doc, and only once your email is verified.
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.auth.token.email_verified == true;
+
+      // Read / delete only your own docs.
+      allow read, delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+
+      // Records are immutable once written.
+      allow update: if false;
+    }
+
+    // Default deny for any other path.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

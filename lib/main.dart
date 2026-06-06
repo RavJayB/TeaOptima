@@ -17,6 +17,7 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/main_screen.dart';
+import 'screens/verify_email_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/capture_screen.dart';
 import 'screens/result_screen.dart';
@@ -94,6 +95,11 @@ class TeaQualityApp extends StatelessWidget {
                     }
                     if (!snapshot.hasData) {
                       return const LoginScreen();
+                    }
+                    // Email/password users must confirm their address first.
+                    // Google sign-ins report emailVerified == true.
+                    if (!snapshot.data!.emailVerified) {
+                      return const VerifyEmailScreen();
                     }
                     return const MainScreen();
                   },

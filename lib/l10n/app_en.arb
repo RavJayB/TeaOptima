@@ -393,5 +393,26 @@
   "factorHeatIndex": "Heat index",
   "factorTempHumRatio": "Temp–humidity ratio",
   "factorProtects": "Protects quality",
-  "factorDegrades": "Speeds degradation"
+  "factorDegrades": "Speeds degradation",
+
+  "authOr": "or",
+  "authContinueGoogle": "Continue with Google",
+  "authGoogleFailed": "Google sign-in failed: {error}",
+  "@authGoogleFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "verifyTitle": "Verify your email",
+  "verifyBody": "We've sent a verification link to {email}. Open the link, then come back and tap below.",
+  "@verifyBody": {
+    "placeholders": { "email": { "type": "String" } }
+  },
+  "verifyImVerified": "I've verified — continue",
+  "verifyResend": "Resend email",
+  "verifyResent": "Verification email sent",
+  "verifyNotYet": "Not verified yet — check your inbox (and spam)",
+  "verifyUseAnother": "Use a different account",
+
+  "authErrEmailInUse": "This email is already registered.",
+  "authErrNetwork": "Network error. Please check your connection.",
+  "authErrGeneric": "Something went wrong. Please try again."
 }

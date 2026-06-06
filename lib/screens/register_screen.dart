@@ -6,6 +6,8 @@ import '../services/auth_service.dart';
 import '../theme/tea_theme.dart';
 import 'login_screen.dart';
 import 'privacy_policy_screen.dart';
+import 'verify_email_screen.dart';
+import 'main_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -50,57 +52,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: _emailC.text.trim(),
         password: _passC.text.trim(),
       );
+      // Account created (signed in, unverified); AuthService already sent the
+      // verification email — route straight to the verify-email gate.
       if (!mounted) return;
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20)),
-          icon: Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: TeaTheme.surface,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.check_circle_rounded,
-                color: TeaTheme.primary, size: 30),
-          ),
-          title: Text(l.registrationSuccessTitle,
-              style: const TextStyle(fontWeight: FontWeight.w800)),
-          content: Text(
-            l.registrationSuccessBody,
-            textAlign: TextAlign.center,
-            style: const TextStyle(height: 1.4),
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: TeaTheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13)),
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(l.commonContinue,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-              ),
-            ),
-          ],
-        ),
-      );
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
+        (route) => false,
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Registration failed: $e'),
+            content: Text(AuthService.friendlyAuthError(l, e)),
             backgroundColor: const Color(0xFFD9534F),
             behavior: SnackBarBehavior.floating,
           ),
@@ -108,6 +71,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _google() async {
+    final l = AppLocalizations.of(context);
+    setState(() => _loading = true);
+    try {
+      final cred = await AuthService.signInWithGoogle();
+      if (cred == null) {
+        if (mounted) setState(() => _loading = false);
+        return; // user cancelled the Google chooser
+      }
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainScreen(startingIndex: 0)),
+        (route) => false,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l.authGoogleFailed('$e')),
+            backgroundColor: const Color(0xFFD9534F),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -177,6 +168,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       _privacyRow(l),
                       const SizedBox(height: 20),
                       _registerButton(l),
+                      const SizedBox(height: 18),
+                      _orDivider(l),
+                      const SizedBox(height: 18),
+                      _googleButton(l),
                       const SizedBox(height: 22),
                       RichText(
                         textAlign: TextAlign.center,
@@ -328,6 +323,87 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _orDivider(AppLocalizations l) {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: TeaTheme.border, thickness: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            l.authOr,
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const Expanded(child: Divider(color: TeaTheme.border, thickness: 1)),
+      ],
+    );
+  }
+
+  Widget _googleButton(AppLocalizations l) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: _loading ? null : _google,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: TeaTheme.border),
+          ),
+          child: Center(
+            child: _loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2.4, color: TeaTheme.primary),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _googleGlyph(),
+                      const SizedBox(width: 10),
+                      Text(
+                        l.authContinueGoogle,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: TeaTheme.deep,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Placeholder "G" mark — swap for the official multicolor Google asset
+  // before Play Store release (branding-guideline compliance).
+  Widget _googleGlyph() {
+    return const SizedBox(
+      width: 22,
+      height: 22,
+      child: Center(
+        child: Text(
+          'G',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF4285F4),
+          ),
+        ),
+      ),
     );
   }
 
