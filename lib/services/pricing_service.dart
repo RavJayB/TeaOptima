@@ -10,6 +10,8 @@
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'remote_config_service.dart';
+
 class PricingService {
   // Defaults — indicative Colombo Tea Auction net sale averages (LKR/kg).
   // Farmers can edit these in-app.
@@ -43,18 +45,61 @@ class PricingService {
     }
   }
 
+  // Alongside each override we store the auction price it was made against
+  // ("baseline"). A grower's edit only holds while the auction price is
+  // unchanged; once the admin publishes a NEW price, the baseline no longer
+  // matches and the override is dropped so the new auction price shows.
+  static String _baseKey(String tier) => '${_key(tier)}_base';
+
+  /// Indicative prices for display (banner): remote → hardcoded. Ignores any
+  /// per-grower override — the banner always shows the admin's auction prices.
+  static Map<String, double> indicativePrices() => {
+        for (final t in defaultPrices.keys)
+          t: RemoteConfigService.remotePrice(t) ?? defaultPrices[t]!,
+      };
+
+  /// Effective prices for the factory card + economic impact.
+  /// A grower's override applies ONLY while the auction price it was made
+  /// against is still current; if the admin has since published a new price,
+  /// the stale override is discarded and the new auction price is used.
   static Future<Map<String, double>> loadPrices() async {
     final p = await SharedPreferences.getInstance();
-    return {
-      for (final t in defaultPrices.keys)
-        t: p.getDouble(_key(t)) ?? defaultPrices[t]!,
-    };
+    final indicative = indicativePrices();
+    final out = <String, double>{};
+    for (final t in defaultPrices.keys) {
+      final ind = indicative[t]!;
+      final override = p.getDouble(_key(t));
+      final base = p.getDouble(_baseKey(t));
+      if (override != null && base != null && (base - ind).abs() < 0.5) {
+        out[t] = override; // grower's edit, auction price unchanged → keep it
+      } else {
+        if (override != null) {
+          // No baseline match → auction price changed → drop the stale override.
+          await p.remove(_key(t));
+          await p.remove(_baseKey(t));
+        }
+        out[t] = ind; // follow the latest auction price
+      }
+    }
+    return out;
   }
 
+  /// Persist prices. A tier is pinned as a grower override only when it differs
+  /// from the current auction price; we also record the auction price it was
+  /// made against so it can be auto-released on the next price publish.
   static Future<void> savePrices(Map<String, double> prices) async {
     final p = await SharedPreferences.getInstance();
+    final indicative = indicativePrices();
     for (final entry in prices.entries) {
-      await p.setDouble(_key(entry.key), entry.value);
+      final t = entry.key;
+      final ind = indicative[t] ?? defaultPrices[t]!;
+      if ((entry.value - ind).abs() < 0.5) {
+        await p.remove(_key(t)); // matches auction → follow remote
+        await p.remove(_baseKey(t));
+      } else {
+        await p.setDouble(_key(t), entry.value); // grower override
+        await p.setDouble(_baseKey(t), ind); // ...against this auction price
+      }
     }
   }
 
@@ -62,6 +107,7 @@ class PricingService {
     final p = await SharedPreferences.getInstance();
     for (final t in defaultPrices.keys) {
       await p.remove(_key(t));
+      await p.remove(_baseKey(t));
     }
   }
 

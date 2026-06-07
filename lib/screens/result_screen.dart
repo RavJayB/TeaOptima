@@ -2916,10 +2916,11 @@ class _ResultScreenState extends State<ResultScreen> {
                           child: OutlinedButton.icon(
                             onPressed: () async {
                               await PricingService.resetToDefaults();
+                              final indicative =
+                                  PricingService.indicativePrices();
                               for (final t in ['T1', 'T2', 'T3', 'T4']) {
                                 controllers[t]!.text =
-                                    PricingService.defaultPrices[t]!
-                                        .toStringAsFixed(0);
+                                    (indicative[t] ?? 0).toStringAsFixed(0);
                               }
                             },
                             icon: const Icon(Icons.restart_alt_rounded,

@@ -11,6 +11,7 @@ import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/config_service.dart';
 import 'services/locale_controller.dart';
+import 'services/remote_config_service.dart';
 
 import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
@@ -34,6 +35,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Fetch latest indicative tea prices (graceful: never blocks fatally).
+  await RemoteConfigService.init();
 
   // Load the user's saved app language (English / Sinhala / Tamil)
   await LocaleController.load();

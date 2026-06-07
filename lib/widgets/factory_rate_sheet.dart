@@ -89,9 +89,10 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
   }
 
   Future<void> _reset() async {
-    await PricingService.resetToDefaults();
+    await PricingService.resetToDefaults(); // clears user overrides
+    final indicative = PricingService.indicativePrices(); // remote auction → hardcoded
     for (final t in ['T1', 'T2', 'T3', 'T4']) {
-      _priceCtrls[t]!.text = PricingService.defaultPrices[t]!.toStringAsFixed(0);
+      _priceCtrls[t]!.text = (indicative[t] ?? 0).toStringAsFixed(0);
     }
     setState(() {});
   }

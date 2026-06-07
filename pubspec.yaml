@@ -52,6 +52,7 @@ dependencies:
   google_sign_in: ^6.2.1
   pdf: ^3.11.1
   printing: ^5.13.2
+  firebase_remote_config: ^5.5.0
 
 dev_dependencies:
   flutter_test:

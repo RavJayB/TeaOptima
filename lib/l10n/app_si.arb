@@ -327,5 +327,9 @@
 
   "authErrEmailInUse": "මෙම විද්‍යුත් තැපෑල දැනටමත් ලියාපදිංචි කර ඇත.",
   "authErrNetwork": "ජාල දෝෂයකි. ඔබේ සම්බන්ධතාවය පරීක්ෂා කරන්න.",
-  "authErrGeneric": "යම් දෝෂයක් ඇතිවිය. නැවත උත්සාහ කරන්න."
+  "authErrGeneric": "යම් දෝෂයක් ඇතිවිය. නැවත උත්සාහ කරන්න.",
+
+  "bannerAuctionRates": "කොළඹ වෙන්දේසි මිල",
+  "bannerIndicative": "දළ",
+  "tierWord": "ශ්‍රේණිය"
 }

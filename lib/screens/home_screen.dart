@@ -8,6 +8,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
 import '../theme/tea_theme.dart';
+import '../widgets/price_ticker_banner.dart';
 import 'main_screen.dart';
 
 // ────────────────────────────────────────────────────────────
@@ -140,6 +141,11 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _heroCarousel(),
+                const SizedBox(height: 18),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: PriceTickerBanner(),
+                ),
                 const SizedBox(height: 18),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),

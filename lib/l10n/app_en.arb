@@ -414,5 +414,9 @@
 
   "authErrEmailInUse": "This email is already registered.",
   "authErrNetwork": "Network error. Please check your connection.",
-  "authErrGeneric": "Something went wrong. Please try again."
+  "authErrGeneric": "Something went wrong. Please try again.",
+
+  "bannerAuctionRates": "Colombo Auction Rates",
+  "bannerIndicative": "indicative",
+  "tierWord": "Tier"
 }
