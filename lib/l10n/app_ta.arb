@@ -331,5 +331,12 @@
 
   "bannerAuctionRates": "கொழும்பு ஏல விலைகள்",
   "bannerIndicative": "தோராயம்",
-  "tierWord": "நிலை"
+  "tierWord": "நிலை",
+
+  "appearance": "தோற்றம்",
+  "appearanceSub": "வெளிர், இருண்ட அல்லது கணினியைப் பின்பற்று",
+  "themeLight": "வெளிர் தீம்",
+  "themeDark": "இருண்ட தீம்",
+  "themeSystem": "கணினி இயல்புநிலை",
+  "chooseAppearance": "தோற்றத்தைத் தேர்ந்தெடுக்கவும்"
 }

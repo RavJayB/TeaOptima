@@ -7,9 +7,15 @@ import 'package:intl/intl.dart';
 
 import '../theme/tea_theme.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+// State class so every helper can read the theme via `context.tea`.
+class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -21,9 +27,9 @@ class HistoryScreen extends StatelessWidget {
         .snapshots();
 
     return Scaffold(
-      backgroundColor: TeaTheme.bgTop,
+      backgroundColor: context.tea.bg,
       body: Container(
-        decoration: TeaTheme.screenGradient(),
+        decoration: TeaTheme.gradientOf(context),
         child: SafeArea(
           bottom: false,
           child: StreamBuilder<QuerySnapshot>(
@@ -202,7 +208,7 @@ class HistoryScreen extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
-        decoration: TeaTheme.card(),
+        decoration: TeaTheme.cardOf(context),
         child: Column(
           children: [
             Container(
@@ -217,10 +223,10 @@ class HistoryScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
-                color: TeaTheme.deep,
+                color: context.tea.ink,
                 height: 1,
               ),
             ),
@@ -230,7 +236,7 @@ class HistoryScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 8.5,
                 fontWeight: FontWeight.w700,
-                color: Colors.grey.shade500,
+                color: context.tea.faint,
                 letterSpacing: 0.8,
               ),
             ),
@@ -246,7 +252,7 @@ class HistoryScreen extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: TeaTheme.card(),
+      decoration: TeaTheme.cardOf(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -256,7 +262,7 @@ class HistoryScreen extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: TeaTheme.surface,
+                  color: context.tea.surface,
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: const Icon(Icons.workspace_premium_rounded,
@@ -265,11 +271,11 @@ class HistoryScreen extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 l.histQualityProfile,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.5,
-                  color: TeaTheme.deep,
+                  color: context.tea.ink,
                 ),
               ),
               const Spacer(),
@@ -320,7 +326,7 @@ class HistoryScreen extends StatelessWidget {
                         Container(
                           height: 18,
                           decoration: BoxDecoration(
-                            color: TeaTheme.surface,
+                            color: context.tea.surface,
                             borderRadius: BorderRadius.circular(9),
                           ),
                         ),
@@ -348,7 +354,7 @@ class HistoryScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade700,
+                        color: context.tea.sub,
                       ),
                     ),
                   ),
@@ -365,7 +371,7 @@ class HistoryScreen extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: TeaTheme.card(),
+      decoration: TeaTheme.cardOf(context),
       child: Row(
         children: [
           Expanded(
@@ -376,7 +382,7 @@ class HistoryScreen extends StatelessWidget {
               accent: TeaTheme.primary,
             ),
           ),
-          Container(width: 1, height: 34, color: TeaTheme.border),
+          Container(width: 1, height: 34, color: context.tea.border),
           Expanded(
             child: _insightItem(
               icon: Icons.spa_rounded,
@@ -412,7 +418,7 @@ class HistoryScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 8.5,
                   fontWeight: FontWeight.w700,
-                  color: Colors.grey.shade500,
+                  color: context.tea.faint,
                   letterSpacing: 0.8,
                 ),
               ),
@@ -421,10 +427,10 @@ class HistoryScreen extends StatelessWidget {
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: TeaTheme.deep,
+                  color: context.tea.ink,
                 ),
               ),
             ],
@@ -441,11 +447,11 @@ class HistoryScreen extends StatelessWidget {
         children: [
           Text(
             l.histRecentPredictions,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.5,
-              color: TeaTheme.deep,
+              color: context.tea.ink,
             ),
           ),
           const SizedBox(width: 8),
@@ -454,7 +460,7 @@ class HistoryScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontStyle: FontStyle.italic,
-              color: Colors.grey.shade500,
+              color: context.tea.faint,
             ),
           ),
         ],
@@ -510,7 +516,7 @@ class HistoryScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             onTap: () => _showDetail(context, l, data),
             child: Container(
-              decoration: TeaTheme.card().copyWith(
+              decoration: TeaTheme.cardOf(context).copyWith(
                 borderRadius: BorderRadius.circular(18),
               ),
               padding: const EdgeInsets.all(12),
@@ -568,10 +574,10 @@ class HistoryScreen extends StatelessWidget {
                           children: [
                             Text(
                               l.histLeafAgeShort('$leafAge'),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w800,
-                                color: TeaTheme.deep,
+                                color: context.tea.ink,
                               ),
                             ),
                             if (level != UrgencyLevel.stable) ...[
@@ -584,7 +590,7 @@ class HistoryScreen extends StatelessWidget {
                         Row(
                           children: [
                             Icon(Icons.location_on_rounded,
-                                size: 13, color: Colors.grey.shade500),
+                                size: 13, color: context.tea.faint),
                             const SizedBox(width: 3),
                             Expanded(
                               child: Text(
@@ -593,18 +599,18 @@ class HistoryScreen extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey.shade700,
+                                  color: context.tea.sub,
                                 ),
                               ),
                             ),
                             Icon(Icons.schedule_rounded,
-                                size: 12, color: Colors.grey.shade400),
+                                size: 12, color: context.tea.faint),
                             const SizedBox(width: 3),
                             Text(
                               date,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: Colors.grey.shade500,
+                                color: context.tea.faint,
                               ),
                             ),
                           ],
@@ -622,7 +628,7 @@ class HistoryScreen extends StatelessWidget {
                             size: 16, color: TeaTheme.mid.withOpacity(0.7)),
                       const SizedBox(height: 6),
                       Icon(Icons.chevron_right_rounded,
-                          color: Colors.grey.shade400, size: 20),
+                          color: context.tea.faint, size: 20),
                     ],
                   ),
                 ],
@@ -781,9 +787,9 @@ class HistoryScreen extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   sub,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: TeaTheme.deep,
+                    color: context.tea.ink,
                     height: 1.3,
                   ),
                 ),
@@ -815,9 +821,10 @@ class HistoryScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: TeaTheme.bgTop,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: context.tea.bg,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
           top: false,
@@ -832,7 +839,7 @@ class HistoryScreen extends StatelessWidget {
                     width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: context.tea.border,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -856,7 +863,7 @@ class HistoryScreen extends StatelessWidget {
                       date,
                       style: TextStyle(
                         fontSize: 11.5,
-                        color: Colors.grey.shade600,
+                        color: context.tea.sub,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -879,16 +886,16 @@ class HistoryScreen extends StatelessWidget {
                           : Container(
                               height: 180,
                               alignment: Alignment.center,
-                              color: TeaTheme.surface,
+                              color: context.tea.surface,
                               child: const CircularProgressIndicator(
                                   color: TeaTheme.primary),
                             ),
                       errorBuilder: (c, e, s) => Container(
                         height: 100,
                         alignment: Alignment.center,
-                        color: TeaTheme.surface,
+                        color: context.tea.surface,
                         child: Text(l.histImageUnavailable,
-                            style: TextStyle(color: Colors.grey.shade600)),
+                            style: TextStyle(color: context.tea.sub)),
                       ),
                     ),
                   ),
@@ -965,9 +972,9 @@ class HistoryScreen extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 3),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.tea.card,
           borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: TeaTheme.border),
+          border: Border.all(color: context.tea.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -979,7 +986,7 @@ class HistoryScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 8,
                 fontWeight: FontWeight.w700,
-                color: Colors.grey.shade500,
+                color: context.tea.faint,
                 letterSpacing: 0.6,
               ),
             ),
@@ -988,10 +995,10 @@ class HistoryScreen extends StatelessWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: TeaTheme.deep,
+                color: context.tea.ink,
               ),
             ),
           ],
@@ -1012,7 +1019,7 @@ class HistoryScreen extends StatelessWidget {
               width: 88,
               height: 88,
               decoration: BoxDecoration(
-                color: TeaTheme.surface,
+                color: context.tea.surface,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.eco_rounded,
@@ -1021,10 +1028,10 @@ class HistoryScreen extends StatelessWidget {
             const SizedBox(height: 18),
             Text(
               l.histNoPredictions,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
-                color: TeaTheme.deep,
+                color: context.tea.ink,
               ),
             ),
             const SizedBox(height: 6),
@@ -1033,7 +1040,7 @@ class HistoryScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.grey.shade600,
+                color: context.tea.sub,
                 height: 1.4,
               ),
             ),

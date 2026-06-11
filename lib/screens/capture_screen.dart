@@ -163,10 +163,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: TeaTheme.bgTop,
+      backgroundColor: context.tea.bg,
       appBar: AppBar(
-        backgroundColor: TeaTheme.bgTop,
-        foregroundColor: TeaTheme.deep,
+        backgroundColor: context.tea.bg,
+        foregroundColor: context.tea.ink,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
@@ -176,7 +176,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
         ),
       ),
       body: Container(
-        decoration: TeaTheme.screenGradient(),
+        decoration: TeaTheme.gradientOf(context),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Column(
@@ -247,26 +247,26 @@ class _CaptureScreenState extends State<CaptureScreen> {
               Container(
                 width: 64,
                 height: 64,
-                decoration: const BoxDecoration(
-                  color: TeaTheme.surface,
+                decoration: BoxDecoration(
+                  color: context.tea.surface,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.add_a_photo_rounded,
-                    color: TeaTheme.primary, size: 30),
+                child: Icon(Icons.add_a_photo_rounded,
+                    color: context.tea.accent, size: 30),
               ),
               const SizedBox(height: 14),
               Text(
                 l.captureNoLeaf,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: TeaTheme.deep,
+                  color: context.tea.ink,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 l.captureUseCamera,
-                style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 12.5, color: context.tea.sub),
               ),
             ],
           ),
@@ -276,7 +276,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
     return Container(
       decoration: _base64Image != null
-          ? TeaTheme.card().copyWith(borderRadius: BorderRadius.circular(18))
+          ? TeaTheme.cardOf(context).copyWith(borderRadius: BorderRadius.circular(18))
           : null,
       padding: _base64Image != null ? const EdgeInsets.all(6) : EdgeInsets.zero,
       child: content,
@@ -339,10 +339,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 const SizedBox(height: 2),
                 Text(
                   isUnknown ? l.captureRetake : _tDesc(l, label),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    color: TeaTheme.deep,
+                    color: context.tea.ink,
                   ),
                 ),
               ],
@@ -412,20 +412,20 @@ class _CaptureScreenState extends State<CaptureScreen> {
                   ],
                 )
               : BoxDecoration(
-                  color: Colors.white,
+                  color: context.tea.card,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: TeaTheme.border),
+                  border: Border.all(color: context.tea.border),
                 ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon,
-                  color: filled ? Colors.white : TeaTheme.primary, size: 20),
+                  color: filled ? Colors.white : context.tea.accent, size: 20),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: filled ? Colors.white : TeaTheme.primary,
+                  color: filled ? Colors.white : context.tea.accent,
                   fontWeight: FontWeight.w800,
                   fontSize: 15,
                 ),
@@ -447,7 +447,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
     ];
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: TeaTheme.card(),
+      decoration: TeaTheme.cardOf(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -466,11 +466,11 @@ class _CaptureScreenState extends State<CaptureScreen> {
               const SizedBox(width: 10),
               Text(
                 l.captureTipsTitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.2,
-                  color: TeaTheme.deep,
+                  color: context.tea.ink,
                 ),
               ),
             ],
@@ -480,14 +480,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
-                    Icon(t.$1, size: 16, color: TeaTheme.mid),
+                    Icon(t.$1, size: 16, color: context.tea.accent),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         t.$2,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF374151),
+                          color: context.tea.ink.withOpacity(0.85),
                         ),
                       ),
                     ),
@@ -504,7 +504,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
     final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: TeaTheme.card(),
+      decoration: TeaTheme.cardOf(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -514,10 +514,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
               const SizedBox(width: 8),
               Text(
                 l.captureLeafAge,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
-                  color: TeaTheme.deep,
+                  color: context.tea.ink,
                 ),
               ),
               const Spacer(),
@@ -525,7 +525,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: TeaTheme.surface,
+                  color: context.tea.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -542,7 +542,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
           const SizedBox(height: 4),
           Text(
             l.captureLeafAgeSub,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 12, color: context.tea.sub),
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -566,10 +566,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
                             colors: [TeaTheme.primary, TeaTheme.mid],
                           )
                         : null,
-                    color: selected ? null : Colors.white,
+                    color: selected ? null : context.tea.card,
                     borderRadius: BorderRadius.circular(13),
                     border: Border.all(
-                      color: selected ? Colors.transparent : TeaTheme.border,
+                      color: selected ? Colors.transparent : context.tea.border,
                     ),
                     boxShadow: selected
                         ? [
@@ -586,7 +586,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 14,
-                      color: selected ? Colors.white : TeaTheme.deep,
+                      color: selected ? Colors.white : context.tea.ink,
                     ),
                   ),
                 ),
@@ -603,9 +603,9 @@ class _CaptureScreenState extends State<CaptureScreen> {
     final l = AppLocalizations.of(context);
     final enabled = _isReady && !_isLoading;
     return Container(
-      decoration: const BoxDecoration(
-        color: TeaTheme.bgBottom,
-        border: Border(top: BorderSide(color: TeaTheme.border)),
+      decoration: BoxDecoration(
+        color: context.tea.bgBottom,
+        border: Border(top: BorderSide(color: context.tea.border)),
       ),
       child: SafeArea(
         top: false,

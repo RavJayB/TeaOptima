@@ -12,6 +12,8 @@ import 'services/auth_service.dart';
 import 'services/config_service.dart';
 import 'services/locale_controller.dart';
 import 'services/remote_config_service.dart';
+import 'services/theme_controller.dart';
+import 'theme/tea_theme.dart';
 
 import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
@@ -42,6 +44,9 @@ void main() async {
   // Load the user's saved app language (English / Sinhala / Tamil)
   await LocaleController.load();
 
+  // Load the user's saved appearance (light / dark / system)
+  await ThemeController.load();
+
   final prefs = await SharedPreferences.getInstance();
   final onboardingCompleted = prefs.getBool("onboardingCompleted") ?? false;
 
@@ -54,14 +59,19 @@ class TeaQualityApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild the whole app when the language changes.
-    return ValueListenableBuilder<Locale>(
-      valueListenable: LocaleController.locale,
-      builder: (context, locale, _) {
-        return MaterialApp(
+    // Rebuild the whole app when the language or appearance changes.
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.mode,
+      builder: (context, themeMode, _) =>
+          ValueListenableBuilder<Locale>(
+        valueListenable: LocaleController.locale,
+        builder: (context, locale, _) {
+          return MaterialApp(
           title: 'TeaOptima',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(primarySwatch: Colors.green),
+          theme: TeaTheme.lightTheme(),
+          darkTheme: TeaTheme.darkTheme(),
+          themeMode: themeMode,
 
           // ── Localization ──
           locale: locale,
@@ -121,8 +131,9 @@ class TeaQualityApp extends StatelessWidget {
             '/history': (_) => const HistoryScreen(),
             '/profile': (_) => const ProfileScreen(),
           },
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

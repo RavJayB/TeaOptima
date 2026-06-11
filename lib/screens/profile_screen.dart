@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../services/auth_service.dart';
 import '../services/locale_controller.dart';
+import '../services/theme_controller.dart';
 import '../theme/tea_theme.dart';
 import '../widgets/factory_rate_sheet.dart';
 import 'privacy_policy_screen.dart';
@@ -24,13 +25,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _avatarUrl;
   bool _busy = false;
 
+  /// Default generated avatar (used when the account has no photo).
+  String get _generatedAvatar =>
+      'https://api.dicebear.com/6.x/bottts/png?seed=${_user.uid}&size=200';
+
+  /// Google photo URLs end in `=s96-c` (96 px) — request a sharper size for
+  /// the large profile avatar.
+  String _hiRes(String url) =>
+      url.replaceFirst(RegExp(r'=s\d+(-c)?$'), '=s256-c');
+
   @override
   void initState() {
     super.initState();
     _user = _auth.currentUser!;
     _username = _user.displayName ?? 'Farmer';
-    _avatarUrl =
-        'https://api.dicebear.com/6.x/bottts/png?seed=${_user.uid}&size=200';
+    // Prefer the account's own photo (e.g. Google DP); else generated avatar.
+    final photo = _user.photoURL;
+    _avatarUrl = (photo != null && photo.isNotEmpty)
+        ? _hiRes(photo)
+        : _generatedAvatar;
   }
 
   String get _email => _user.email ?? '—';
@@ -129,13 +142,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _openLanguagePicker() async {
     final l = AppLocalizations.of(context);
+    final p = context.tea; // capture: builder must not look up ancestors
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: TeaTheme.bgTop,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: p.bg,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
           top: false,
@@ -147,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: p.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -156,15 +171,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    const Icon(Icons.translate_rounded,
-                        color: TeaTheme.primary, size: 22),
+                    Icon(Icons.translate_rounded,
+                        color: p.accent, size: 22),
                     const SizedBox(width: 10),
                     Text(
                       l.selectLanguage,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: TeaTheme.deep,
+                        color: p.ink,
                       ),
                     ),
                   ],
@@ -181,12 +196,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   leading: CircleAvatar(
                     radius: 18,
                     backgroundColor: selected
-                        ? TeaTheme.primary
-                        : TeaTheme.surface,
+                        ? p.accent
+                        : p.surface,
                     child: Text(
                       e.key.toUpperCase(),
                       style: TextStyle(
-                        color: selected ? Colors.white : TeaTheme.primary,
+                        color:
+                            selected ? Colors.white : p.accent,
                         fontWeight: FontWeight.w800,
                         fontSize: 12,
                       ),
@@ -197,12 +213,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(
                       fontWeight:
                           selected ? FontWeight.w800 : FontWeight.w600,
-                      color: TeaTheme.deep,
+                      color: p.ink,
                     ),
                   ),
                   trailing: selected
-                      ? const Icon(Icons.check_circle_rounded,
-                          color: TeaTheme.primary)
+                      ? Icon(Icons.check_circle_rounded,
+                          color: p.accent)
                       : null,
                 );
               }),
@@ -214,6 +230,101 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  String _themeModeName(AppLocalizations l, ThemeMode m) => switch (m) {
+        ThemeMode.light => l.themeLight,
+        ThemeMode.dark => l.themeDark,
+        ThemeMode.system => l.themeSystem,
+      };
+
+  Future<void> _openAppearancePicker() async {
+    final l = AppLocalizations.of(context);
+    final p = context.tea;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: p.bg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: p.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Icon(Icons.dark_mode_rounded, color: p.accent, size: 22),
+                    const SizedBox(width: 10),
+                    Text(
+                      l.chooseAppearance,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: p.ink,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (final (mode, icon) in const [
+                (ThemeMode.light, Icons.light_mode_rounded),
+                (ThemeMode.dark, Icons.dark_mode_rounded),
+                (ThemeMode.system, Icons.brightness_auto_rounded),
+              ])
+                ListTile(
+                  onTap: () async {
+                    await ThemeController.setMode(mode);
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: ThemeController.mode.value == mode
+                        ? p.accent
+                        : p.surface,
+                    child: Icon(
+                      icon,
+                      size: 18,
+                      color: ThemeController.mode.value == mode
+                          ? Colors.white
+                          : p.accent,
+                    ),
+                  ),
+                  title: Text(
+                    _themeModeName(l, mode),
+                    style: TextStyle(
+                      fontWeight: ThemeController.mode.value == mode
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: p.ink,
+                    ),
+                  ),
+                  trailing: ThemeController.mode.value == mode
+                      ? Icon(Icons.check_circle_rounded, color: p.accent)
+                      : null,
+                ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (mounted) setState(() {}); // refresh the tile subtitle
+  }
+
   void _openAbout() {
     showAboutDialog(
       context: context,
@@ -223,10 +334,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: TeaTheme.surface,
+          color: context.tea.surface,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(Icons.eco_rounded, color: TeaTheme.primary),
+        child: Icon(Icons.eco_rounded, color: context.tea.accent),
       ),
       children: const [
         SizedBox(height: 12),
@@ -275,10 +386,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: TeaTheme.bgTop,
+      backgroundColor: context.tea.bg,
       extendBody: true,
       body: Container(
-        decoration: TeaTheme.screenGradient(),
+        decoration: TeaTheme.gradientOf(context),
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -286,36 +397,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 58), // room for overlapping avatar
               Text(
                 _username,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
-                  color: TeaTheme.deep,
+                  color: context.tea.ink,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 _email,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 13, color: context.tea.sub),
               ),
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
-                  color: TeaTheme.surface,
+                  color: context.tea.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.verified_rounded,
-                        size: 13, color: TeaTheme.primary),
+                    Icon(Icons.verified_rounded,
+                        size: 13, color: context.tea.accent),
                     const SizedBox(width: 5),
                     Text(
                       l.teaGrowerSince(_memberSince),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: TeaTheme.primary,
+                        color: context.tea.accent,
                       ),
                     ),
                   ],
@@ -354,7 +465,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: l.factoryRateCard,
                         subtitle: l.factoryRateCardSub,
                         trailing: Icon(Icons.chevron_right_rounded,
-                            color: Colors.grey.shade400),
+                            color: context.tea.faint),
                         onTap: _openRateCard,
                       ),
                       _divider(),
@@ -364,8 +475,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: l.appLanguage,
                         subtitle: LocaleController.currentName,
                         trailing: Icon(Icons.chevron_right_rounded,
-                            color: Colors.grey.shade400),
+                            color: context.tea.faint),
                         onTap: _openLanguagePicker,
+                      ),
+                      _divider(),
+                      _tile(
+                        icon: context.tea.isDark
+                            ? Icons.dark_mode_rounded
+                            : Icons.light_mode_rounded,
+                        accent: const Color(0xFF8B5CF6),
+                        title: l.appearance,
+                        subtitle:
+                            _themeModeName(l, ThemeController.mode.value),
+                        trailing: Icon(Icons.chevron_right_rounded,
+                            color: context.tea.faint),
+                        onTap: _openAppearancePicker,
                       ),
                     ]),
                     const SizedBox(height: 18),
@@ -377,7 +501,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: l.privacyPolicy,
                         subtitle: l.privacyPolicySub,
                         trailing: Icon(Icons.chevron_right_rounded,
-                            color: Colors.grey.shade400),
+                            color: context.tea.faint),
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -392,7 +516,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: l.aboutTeaOptima,
                         subtitle: l.versionLabel('1.0.0'),
                         trailing: Icon(Icons.chevron_right_rounded,
-                            color: Colors.grey.shade400),
+                            color: context.tea.faint),
                         onTap: _openAbout,
                       ),
                     ]),
@@ -403,7 +527,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       l.profileFooter,
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey.shade500,
+                        color: context.tea.faint,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -521,7 +645,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: TeaTheme.bgTop,
+                  color: context.tea.bg,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -533,13 +657,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 child: CircleAvatar(
                   radius: 48,
-                  backgroundColor: Colors.white,
+                  backgroundColor: context.tea.card,
                   backgroundImage: _avatarUrl != null
                       ? NetworkImage(_avatarUrl!)
                       : const AssetImage('assets/login_bg.png')
                           as ImageProvider,
                   onBackgroundImageError: (_, __) {
-                    if (mounted) setState(() => _avatarUrl = null);
+                    if (!mounted) return;
+                    setState(() {
+                      // Account photo failed → try the generated avatar;
+                      // if that failed too, fall back to the bundled asset.
+                      _avatarUrl = _avatarUrl != _generatedAvatar
+                          ? _generatedAvatar
+                          : null;
+                    });
                   },
                 ),
               ),
@@ -562,7 +693,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             fontSize: 11,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.5,
-            color: TeaTheme.deep.withOpacity(0.7),
+            color: context.tea.ink.withOpacity(0.7),
           ),
         ),
       ),
@@ -571,14 +702,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _card(List<Widget> children) {
     return Container(
-      decoration: TeaTheme.card(),
+      decoration: TeaTheme.cardOf(context),
       child: Column(children: children),
     );
   }
 
-  Widget _divider() => const Padding(
-        padding: EdgeInsets.only(left: 60),
-        child: Divider(height: 1, color: TeaTheme.border),
+  Widget _divider() => Padding(
+        padding: const EdgeInsets.only(left: 60),
+        child: Divider(height: 1, color: context.tea.border),
       );
 
   Widget _tile({
@@ -614,10 +745,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
-                        color: TeaTheme.deep,
+                        color: context.tea.ink,
                       ),
                     ),
                     const SizedBox(height: 1),
@@ -627,7 +758,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: context.tea.sub,
                       ),
                     ),
                   ],

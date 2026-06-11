@@ -418,5 +418,12 @@
 
   "bannerAuctionRates": "Colombo Auction Rates",
   "bannerIndicative": "indicative",
-  "tierWord": "Tier"
+  "tierWord": "Tier",
+
+  "appearance": "Appearance",
+  "appearanceSub": "Light, dark or follow system",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System default",
+  "chooseAppearance": "Choose Appearance"
 }

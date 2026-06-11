@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/tea_theme.dart';
+
 class LoadingScreen extends StatefulWidget {
   final String? message;
   final Future<void> Function()? futureTask;
@@ -113,15 +115,9 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F9F5),
+      backgroundColor: context.tea.bg,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF4F9F5), Color(0xFFEAF3EC)],
-          ),
-        ),
+        decoration: TeaTheme.gradientOf(context),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -158,10 +154,10 @@ class _LoadingScreenState extends State<LoadingScreen> {
               const SizedBox(height: 28),
               Text(
                 widget.message ?? 'Working…',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F3D2E),
+                  color: context.tea.ink,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -170,7 +166,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
                 'TeaOptima is analyzing your leaf',
                 style: TextStyle(
                   fontSize: 12.5,
-                  color: Colors.grey.shade600,
+                  color: context.tea.sub,
                 ),
                 textAlign: TextAlign.center,
               ),

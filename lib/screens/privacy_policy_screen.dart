@@ -36,16 +36,16 @@ class PrivacyPolicyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TeaTheme.bgTop,
+      backgroundColor: context.tea.bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        foregroundColor: TeaTheme.deep,
+        foregroundColor: context.tea.ink,
         elevation: 0,
         title: const Text('Privacy Policy',
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
       ),
       body: Container(
-        decoration: TeaTheme.screenGradient(),
+        decoration: TeaTheme.gradientOf(context),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           child: Column(
@@ -91,7 +91,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Container(
                       padding: const EdgeInsets.all(14),
-                      decoration: TeaTheme.card(),
+                      decoration: TeaTheme.cardOf(context),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -99,10 +99,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
                             width: 38,
                             height: 38,
                             decoration: BoxDecoration(
-                              color: TeaTheme.surface,
+                              color: context.tea.surface,
                               borderRadius: BorderRadius.circular(11),
                             ),
-                            child: Icon(s.$1, color: TeaTheme.primary, size: 19),
+                            child: Icon(s.$1, color: context.tea.accent, size: 19),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -111,10 +111,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   s.$2,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14.5,
                                     fontWeight: FontWeight.w800,
-                                    color: TeaTheme.deep,
+                                    color: context.tea.ink,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -122,7 +122,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                                   s.$3,
                                   style: TextStyle(
                                     fontSize: 12.5,
-                                    color: Colors.grey.shade700,
+                                    color: context.tea.sub,
                                     height: 1.4,
                                   ),
                                 ),
@@ -138,21 +138,21 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: TeaTheme.surface,
+                  color: context.tea.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: TeaTheme.border),
+                  border: Border.all(color: context.tea.border),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.mail_outline_rounded,
-                        color: TeaTheme.primary, size: 18),
+                    Icon(Icons.mail_outline_rounded,
+                        color: context.tea.accent, size: 18),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Questions? Contact us at ravindujayb@gmail.com',
                         style: TextStyle(
                           fontSize: 12.5,
-                          color: TeaTheme.deep,
+                          color: context.tea.ink,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

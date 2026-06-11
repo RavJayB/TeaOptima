@@ -331,5 +331,12 @@
 
   "bannerAuctionRates": "කොළඹ වෙන්දේසි මිල",
   "bannerIndicative": "දළ",
-  "tierWord": "ශ්‍රේණිය"
+  "tierWord": "ශ්‍රේණිය",
+
+  "appearance": "පෙනුම",
+  "appearanceSub": "ලා, අඳුරු හෝ පද්ධතිය අනුව",
+  "themeLight": "ලා තේමාව",
+  "themeDark": "අඳුරු තේමාව",
+  "themeSystem": "පද්ධති පෙරනිමිය",
+  "chooseAppearance": "පෙනුම තෝරන්න"
 }

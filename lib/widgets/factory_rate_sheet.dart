@@ -102,9 +102,10 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
-        decoration: const BoxDecoration(
-          color: TeaTheme.bgTop,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: context.tea.bg,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
           top: false,
@@ -119,7 +120,7 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
                     width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: context.tea.border,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -130,23 +131,23 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: TeaTheme.surface,
+                        color: context.tea.surface,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.local_florist_rounded,
-                          color: TeaTheme.primary, size: 22),
+                      child: Icon(Icons.local_florist_rounded,
+                          color: context.tea.accent, size: 22),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Factory Rate Card',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: TeaTheme.deep,
+                              color: context.tea.ink,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -154,7 +155,7 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
                             'Set Rs/kg per tier — defaults are Colombo Auction averages.',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade700,
+                              color: context.tea.sub,
                               height: 1.3,
                             ),
                           ),
@@ -174,9 +175,9 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
                 Container(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.tea.card,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: TeaTheme.border),
+                    border: Border.all(color: context.tea.border),
                   ),
                   child: Row(
                     children: [
@@ -184,11 +185,11 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: TeaTheme.surface,
+                          color: context.tea.surface,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.scale_rounded,
-                            color: TeaTheme.primary, size: 21),
+                        child: Icon(Icons.scale_rounded,
+                            color: context.tea.accent, size: 21),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -223,7 +224,7 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
                                 horizontal: 8, vertical: 10),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(color: context.tea.border),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -245,8 +246,8 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
                         icon: const Icon(Icons.restart_alt_rounded, size: 18),
                         label: const Text('Reset'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.grey.shade800,
-                          side: BorderSide(color: Colors.grey.shade400),
+                          foregroundColor: context.tea.sub,
+                          side: BorderSide(color: context.tea.border),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -287,9 +288,9 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.tea.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: TeaTheme.border),
+        border: Border.all(color: context.tea.border),
       ),
       child: Row(
         children: [
@@ -322,7 +323,7 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
                         fontSize: 13, fontWeight: FontWeight.w700)),
                 Text(_meta[tier]!.$2,
                     style: TextStyle(
-                        fontSize: 11, color: Colors.grey.shade600)),
+                        fontSize: 11, color: context.tea.sub)),
               ],
             ),
           ),
@@ -341,12 +342,12 @@ class _FactoryRateSheetState extends State<_FactoryRateSheet> {
                 prefixText: 'Rs ',
                 suffixText: '/kg',
                 suffixStyle:
-                    TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                    TextStyle(color: context.tea.faint, fontSize: 11),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: context.tea.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
