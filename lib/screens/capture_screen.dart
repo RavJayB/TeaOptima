@@ -131,6 +131,16 @@ class _CaptureScreenState extends State<CaptureScreen> {
           'startingQuality': _qualityLabel,
         },
       );
+      // Clear this capture so returning to the tab starts fresh & empty.
+      if (mounted) {
+        setState(() {
+          _imageFile = null;
+          _base64Image = null;
+          _qualityScore = null;
+          _qualityLabel = null;
+          _leafAge = 1;
+        });
+      }
     } catch (e) {
       Navigator.of(context).pop(); // Dismiss loading
       _showSnackBar(l.capturePredictFailed('$e'));

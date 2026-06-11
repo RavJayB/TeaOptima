@@ -8,16 +8,15 @@ import 'package:firebase_auth/firebase_auth.dart';       // ← new
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import '../services/api_service.dart';
 import '../services/pdf_report_service.dart';
 import '../services/pricing_service.dart';
 import '../services/recommendation_engine.dart';
 import '../services/locale_controller.dart';
 import 'main_screen.dart';
+import 'home_screen.dart' show WeatherCache;
 
 class ResultScreen extends StatefulWidget {
   @override
@@ -53,11 +52,34 @@ class _ResultScreenState extends State<ResultScreen> {
   final NumberFormat _money =
       NumberFormat.currency(locale: 'en_LK', symbol: 'Rs ', decimalDigits: 0);
 
+  late final Future<void> _weatherReady;
+
   @override
   void initState() {
     super.initState();
-    _getWeather();
+    _applyWeatherFromCache();           // instant: reuse the fetch Home already did
+    _weatherReady = _refreshWeather();  // refresh only if stale (15-min rule)
     _loadPricing();
+  }
+
+  /// Copy the latest weather from the shared cache into local display fields.
+  void _applyWeatherFromCache() {
+    final loc = WeatherCache.location;
+    if (loc.isNotEmpty && loc != 'Fetching…' && loc != 'Location disabled') {
+      place = loc;
+      temp = '${WeatherCache.temp.toStringAsFixed(1)}°C';
+      hum = '${WeatherCache.hum.toStringAsFixed(0)}%';
+      rain = '${WeatherCache.rain.toStringAsFixed(1)} mm';
+    } else if (loc.isNotEmpty && loc != 'Fetching…') {
+      place = loc; // e.g. "Location disabled" — surface it, leave metrics as-is
+    }
+  }
+
+  /// Refresh via the shared cache (no duplicate geolocation unless stale).
+  Future<void> _refreshWeather() async {
+    await WeatherCache.load();
+    if (!mounted) return;
+    setState(_applyWeatherFromCache);
   }
 
   Future<void> _loadPricing() async {
@@ -254,9 +276,9 @@ class _ResultScreenState extends State<ResultScreen> {
       if (timeline.isNotEmpty) _selectPoint(0);
 
       if (!_saved) {
-        _saveSimulation().then((_) {
-          if (mounted) setState(() => _saved = true);
-        });
+        _saved = true; // guard immediately against re-entry
+        // Save only once weather is ready, so history never records "Fetching…".
+        _weatherReady.then((_) => _saveSimulation());
       }
     }
   }
@@ -372,35 +394,6 @@ class _ResultScreenState extends State<ResultScreen> {
             .map((m) => Map<String, dynamic>.from(m))
             .toList()
         : <Map<String, dynamic>>[];
-  }
-
-  Future<void> _getWeather() async {
-    try {
-      final perm = await Geolocator.requestPermission();
-      if (perm == LocationPermission.denied ||
-          perm == LocationPermission.deniedForever) return;
-
-      final pos = await Geolocator.getCurrentPosition();
-
-      final w = await ApiService.getCurrentWeather(
-        lat: pos.latitude,
-        lon: pos.longitude,
-      );
-      final g = await ApiService.getLocation(
-        lat: pos.latitude,
-        lon: pos.longitude,
-      );
-
-      if (!mounted) return;
-      setState(() {
-        temp  = "${(w['temp'] as num).toStringAsFixed(1)}°C";
-        hum   = "${(w['hum']  as num).toStringAsFixed(0)}%";
-        rain  = "${(w['rain'] as num).toStringAsFixed(1)} mm";
-        place = (g['name'] as String?) ?? 'Unknown';
-      });
-    } catch (_) {
-      // silently fail
-    }
   }
 
   @override
