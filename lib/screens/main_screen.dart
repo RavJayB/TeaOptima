@@ -1,5 +1,9 @@
 // lib/screens/main_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+import '../theme/tea_theme.dart';
 import 'home_screen.dart';
 import 'capture_screen.dart';
 import 'history_screen.dart';
@@ -7,7 +11,7 @@ import 'profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final int startingIndex;
-  const MainScreen({Key? key, this.startingIndex = 0}) : super(key: key);
+  const MainScreen({super.key, this.startingIndex = 0});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -17,11 +21,21 @@ class _MainScreenState extends State<MainScreen> {
   late int _selectedIndex;
 
   final List<Widget> _screens = [
-    HomeScreen(),
+    const HomeScreen(),
     CaptureScreen(),
-    HistoryScreen(),
-    ProfileScreen(),
+    const HistoryScreen(),
+    const ProfileScreen(),
   ];
+
+  static const _navIcons = <IconData>[
+    Icons.home_rounded,
+    Icons.camera_alt_rounded,
+    Icons.insights_rounded,
+    Icons.person_rounded,
+  ];
+
+  String _navLabel(AppLocalizations l, int i) =>
+      [l.navHome, l.navCapture, l.navHistory, l.navProfile][i];
 
   @override
   void initState() {
@@ -30,127 +44,110 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _onTap(int idx) {
+    if (idx == _selectedIndex) return;
+    HapticFeedback.selectionClick();
     setState(() => _selectedIndex = idx);
   }
 
   @override
   Widget build(BuildContext context) {
-    // colors from your mock
-    const activeColor = Color(0xFF276749);   // deep green
-    const inactiveColor = Color(0xFF6B7280); // subtle gray-green
-    // const bgColor = Colors.white;       // off-white pill
-
     return Scaffold(
-       // 1) paint the light-green everywhere
-      backgroundColor: const Color(0xFFEAF8EE),
-      // 2) let body extend under the bottom nav
+      backgroundColor: TeaTheme.bgTop,
       extendBody: true,
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFEFDF5), // off-white pill
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 8,
-              )
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // Home
-              _NavIcon(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
-                label: 'Home',
-                isActive: _selectedIndex == 0,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-                onTap: () => _onTap(0),
-              ),
+      // IndexedStack keeps each tab's state alive when switching.
+      body: IndexedStack(index: _selectedIndex, children: _screens),
+      bottomNavigationBar: _buildNavBar(),
+    );
+  }
 
-              // Capture (center, slightly larger)
-              _NavIcon(
-                icon: Icons.camera_alt_outlined,
-                activeIcon: Icons.camera_alt,
-                label: 'Capture',
-                isActive: _selectedIndex == 1,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-                onTap: () => _onTap(1),
-                size: _selectedIndex == 1 ?  32 :  28,
-              ),
-
-              // History
-              _NavIcon(
-                icon: Icons.history_outlined,
-                activeIcon: Icons.history,
-                label: 'History',
-                isActive: _selectedIndex == 2,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-                onTap: () => _onTap(2),
-              ),
-
-              // Profile
-              _NavIcon(
-                icon: Icons.person_outline,
-                activeIcon: Icons.person,
-                label: 'Profile',
-                isActive: _selectedIndex == 3,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-                onTap: () => _onTap(3),
-              ),
-            ],
-          ),
+  Widget _buildNavBar() {
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: TeaTheme.border),
+          boxShadow: [
+            BoxShadow(
+              color: TeaTheme.deep.withOpacity(0.13),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(_navIcons.length, _buildNavItem),
         ),
       ),
     );
   }
-}
 
-/// A single icon + label in the pill nav.
-class _NavIcon extends StatelessWidget {
-  final IconData icon, activeIcon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-  final Color activeColor, inactiveColor;
-  final double size;
+  Widget _buildNavItem(int i) {
+    final icon = _navIcons[i];
+    final label = _navLabel(AppLocalizations.of(context), i);
+    final active = _selectedIndex == i;
 
-  const _NavIcon({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-    required this.activeColor,
-    required this.inactiveColor,
-    this.size = 24,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isActive ? activeColor : inactiveColor;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(isActive ? activeIcon : icon, color: color, size: size),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(color: color, fontSize: 12),
-          ),
-        ],
+      onTap: () => _onTap(i),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(
+          horizontal: active ? 16 : 13,
+          vertical: 11,
+        ),
+        decoration: BoxDecoration(
+          gradient: active
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [TeaTheme.primary, TeaTheme.mid],
+                )
+              : null,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: TeaTheme.primary.withOpacity(0.33),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: active ? Colors.white : const Color(0xFF9AA5A0),
+              size: 23,
+            ),
+            // Label animates in only for the active tab.
+            AnimatedSize(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              child: active
+                  ? Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
       ),
     );
   }

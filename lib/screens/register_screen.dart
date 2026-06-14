@@ -1,14 +1,18 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 import '../services/auth_service.dart';
-import 'home_screen.dart';
+import '../theme/tea_theme.dart';
 import 'login_screen.dart';
 import 'privacy_policy_screen.dart';
+import 'verify_email_screen.dart';
+import 'main_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  const RegisterScreen({super.key});
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
@@ -29,9 +33,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l = AppLocalizations.of(context);
     if (!_agreed) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must agree to the Privacy Policy')),
+        SnackBar(
+          content: Text(l.agreePrivacyError),
+          backgroundColor: TeaTheme.deep,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -43,201 +52,401 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: _emailC.text.trim(),
         password: _passC.text.trim(),
       );
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Registration Successful'),
-          content: const Text('Welcome! Your account has been created.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
-      );
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => LoginScreen()),
+      // Account created (signed in, unverified); AuthService already sent the
+      // verification email — route straight to the verify-email gate.
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
+        (route) => false,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration failed: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AuthService.friendlyAuthError(l, e)),
+            backgroundColor: const Color(0xFFD9534F),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  Future<void> _google() async {
+    final l = AppLocalizations.of(context);
+    setState(() => _loading = true);
+    try {
+      final cred = await AuthService.signInWithGoogle();
+      if (cred == null) {
+        if (mounted) setState(() => _loading = false);
+        return; // user cancelled the Google chooser
+      }
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainScreen(startingIndex: 0)),
+        (route) => false,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l.authGoogleFailed('$e')),
+            backgroundColor: const Color(0xFFD9534F),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              const SizedBox(height: 120),
-              const Text(
-                'Register',
-                style: TextStyle(
-                  fontSize: 38,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF256724),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Create your new account',
-                style: TextStyle(color: Colors.black54),
-              ),
-              const SizedBox(height: 40),
-
-              // Name
-              TextFormField(
-                controller: _nameC,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFFC6DCC5),
-                  prefixIcon: const Icon(Icons.person, color: Color(0xFF256724)),
-                  hintText: 'Full Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                validator: (v) =>
-                    v != null && v.isNotEmpty ? null : 'Name is required',
-              ),
-              const SizedBox(height: 20),
-
-              // Email
-              TextFormField(
-                controller: _emailC,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFFC6DCC5),
-                  prefixIcon: const Icon(Icons.email, color: Color(0xFF256724)),
-                  hintText: 'abc123@gmail.com',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                validator: (v) => v != null && v.contains('@')
-                    ? null
-                    : 'Valid email is required',
-              ),
-              const SizedBox(height: 20),
-
-              // Password
-              TextFormField(
-                controller: _passC,
-                obscureText: _obscure,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFFC6DCC5),
-                  prefixIcon: const Icon(Icons.lock, color: Color(0xFF256724)),
-                  hintText: 'Password',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscure ? Icons.visibility_off : Icons.visibility,
-                    ),
-                    onPressed: () => setState(() => _obscure = !_obscure),
-                  ),
-                ),
-                validator: (v) => v != null && v.length >= 6
-                    ? null
-                    : 'Password must be at least 6 characters',
-              ),
-              const SizedBox(height: 16),
-
-              // Privacy Policy checkbox + link
-              Row(
-                children: [
-                  Checkbox(
-                    value: _agreed,
-                    activeColor: const Color(0xFF256724),
-                    onChanged: (v) => setState(() => _agreed = v ?? false),
-                  ),
-                    Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                      text: 'I agree to the ',
-                      style: theme.textTheme.bodyMedium,
-                      children: [
-                        TextSpan(
-                        text: 'Privacy Policy',
-                        style: const TextStyle(
-                          color: Color(0xFF256724),
-                          decoration: TextDecoration.underline,
-                        ),
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                            builder: (_) => PrivacyPolicyScreen(),
+      backgroundColor: TeaTheme.bgTop,
+      body: Container(
+        decoration: TeaTheme.screenGradient(),
+        child: Column(
+          children: [
+            _header(l),
+            Expanded(
+              child: SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _nameC,
+                        textCapitalization: TextCapitalization.words,
+                        decoration:
+                            TeaTheme.input(l.fullNameHint, Icons.person_rounded),
+                        validator: (v) => v != null && v.trim().isNotEmpty
+                            ? null
+                            : l.nameRequired,
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _emailC,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: TeaTheme.input(
+                            l.emailAddressHint, Icons.email_rounded),
+                        validator: (v) => v != null && v.contains('@')
+                            ? null
+                            : l.validEmailRequired,
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _passC,
+                        obscureText: _obscure,
+                        decoration: TeaTheme.input(
+                          l.passwordMinHint,
+                          Icons.lock_rounded,
+                          suffix: IconButton(
+                            icon: Icon(
+                              _obscure
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded,
+                              color: TeaTheme.primary,
+                              size: 20,
                             ),
-                          );
-                          },
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
+                          ),
+                        ),
+                        validator: (v) => v != null && v.length >= 6
+                            ? null
+                            : l.passwordMin6,
+                      ),
+                      const SizedBox(height: 8),
+                      _privacyRow(l),
+                      const SizedBox(height: 20),
+                      _registerButton(l),
+                      const SizedBox(height: 18),
+                      _orDivider(l),
+                      const SizedBox(height: 18),
+                      _googleButton(l),
+                      const SizedBox(height: 22),
+                      RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          text: '${l.alreadyHaveAccount}  ',
+                          style: TextStyle(color: Colors.grey.shade600),
+                          children: [
+                            TextSpan(
+                              text: l.signIn,
+                              style: const TextStyle(
+                                color: TeaTheme.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                          builder: (_) => const LoginScreen()),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _header(AppLocalizations l) {
+    return Container(
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [TeaTheme.deep, TeaTheme.primary, TeaTheme.mid],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -16,
+            top: -16,
+            child: Icon(Icons.eco_rounded,
+                size: 140, color: Colors.white.withOpacity(0.08)),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 20, 22),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded,
+                            color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      const Text(
+                        'TEAOPTIMA',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          letterSpacing: 1.8,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l.createAccount,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          l.registerSubtitle,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
                         ),
                       ],
-                      ),
-                    ),
-                    ),
-                  ],
-                  ),
-              const SizedBox(height: 34),
-
-              // Register button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF256724),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: _loading ? null : _submit,
-                  child: _loading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('REGISTER',
-                          style: TextStyle(fontSize: 16, color: Colors.white)),
-                ),
+                ],
               ),
-              const SizedBox(height: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              // Already have account?
-              RichText(
-                text: TextSpan(
-                  text: "Already have an account?  ",
-                  style: theme.textTheme.bodyMedium,
-                  children: [
-                    TextSpan(
-                      text: 'Sign in',
-                      style: const TextStyle(
-                        color: Color(0xFF256724),
-                        decoration: TextDecoration.underline,
-                      ),
-                      recognizer: TapGestureRecognizer()
-                        ..onTap = () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => LoginScreen()),
-                            ),
-                    ),
-                  ],
+  Widget _privacyRow(AppLocalizations l) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 28,
+          height: 28,
+          child: Checkbox(
+            value: _agreed,
+            activeColor: TeaTheme.primary,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            onChanged: (v) => setState(() => _agreed = v ?? false),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              text: l.iAgreeTo,
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+              children: [
+                TextSpan(
+                  text: l.privacyPolicy,
+                  style: const TextStyle(
+                    color: TeaTheme.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const PrivacyPolicyScreen()),
+                        ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _orDivider(AppLocalizations l) {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: TeaTheme.border, thickness: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            l.authOr,
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const Expanded(child: Divider(color: TeaTheme.border, thickness: 1)),
+      ],
+    );
+  }
+
+  Widget _googleButton(AppLocalizations l) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: _loading ? null : _google,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: TeaTheme.border),
+          ),
+          child: Center(
+            child: _loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2.4, color: TeaTheme.primary),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _googleGlyph(),
+                      const SizedBox(width: 10),
+                      Text(
+                        l.authContinueGoogle,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: TeaTheme.deep,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Placeholder "G" mark — swap for the official multicolor Google asset
+  // before Play Store release (branding-guideline compliance).
+  Widget _googleGlyph() {
+    return const SizedBox(
+      width: 22,
+      height: 22,
+      child: Center(
+        child: Text(
+          'G',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF4285F4),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _registerButton(AppLocalizations l) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: _loading ? null : _submit,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [TeaTheme.deep, TeaTheme.primary, TeaTheme.mid],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: TeaTheme.primary.withOpacity(0.35),
+                blurRadius: 14,
+                offset: const Offset(0, 7),
               ),
-              const SizedBox(height: 40),
             ],
+          ),
+          child: Center(
+            child: _loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2.4, color: Colors.white),
+                  )
+                : Text(
+                    l.createAccount,
+                    style: const TextStyle(
+                      fontSize: 15.5,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
           ),
         ),
       ),

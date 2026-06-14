@@ -73,4 +73,34 @@ class ApiService {
     }
     return jsonDecode(resp.body) as Map<String, dynamic>;
   }
+
+  /// 🌤️ Current weather via backend (keeps the OpenWeather key server-side).
+  /// Returns: { temp: double, hum: double, rain: double }
+  static Future<Map<String, dynamic>> getCurrentWeather({
+    required double lat,
+    required double lon,
+  }) async {
+    final uri = Uri.parse('${ConfigService.weatherCurrentUrl}?lat=$lat&lon=$lon');
+    final headers = await _authHeaders(json: false);
+    final resp = await http.get(uri, headers: headers);
+    if (resp.statusCode != 200) {
+      throw Exception('Weather fetch failed (${resp.statusCode}): ${resp.body}');
+    }
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
+
+  /// 📍 Reverse geocode (lat/lon → place name) via backend.
+  /// Returns: { name: String }
+  static Future<Map<String, dynamic>> getLocation({
+    required double lat,
+    required double lon,
+  }) async {
+    final uri = Uri.parse('${ConfigService.weatherLocationUrl}?lat=$lat&lon=$lon');
+    final headers = await _authHeaders(json: false);
+    final resp = await http.get(uri, headers: headers);
+    if (resp.statusCode != 200) {
+      throw Exception('Location fetch failed (${resp.statusCode}): ${resp.body}');
+    }
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
 }

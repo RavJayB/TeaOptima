@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../services/api_service.dart';
+import '../theme/tea_theme.dart';
 import 'loading_screen.dart';
 
 class CaptureScreen extends StatefulWidget {
@@ -24,35 +26,22 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   final ImagePicker _picker = ImagePicker();
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
-  String? _extractT(String raw) => RegExp(r'T[1-4]').firstMatch(raw)?.group(0);
-
-  int _tToScore(String t) => 5 - int.parse(t.substring(1));
-
-  String _tDesc(String t) => {
-        'T1': 'Highest Quality',
-        'T2': 'Good Quality',
-        'T3': 'Average Quality',
-        'T4': 'Poor Quality',
-        'Unknown': 'Not a Valid Tea Leaf',
-      }[t] ?? '';
-
-  Color _qualityColor(String? t) {
+  String _tDesc(AppLocalizations l, String t) {
     switch (t) {
       case 'T1':
-        return Colors.green.shade700;
+        return l.tierHighest;
       case 'T2':
-        return Colors.lightGreen.shade600;
+        return l.tierGood;
       case 'T3':
-        return Colors.orange.shade600;
+        return l.tierAverage;
       case 'T4':
-        return Colors.red.shade600;
-      case 'Unknown':
-        return Colors.grey.shade600;
+        return l.tierPoor;
       default:
-        return Colors.grey;
+        return '';
     }
   }
+
+  bool get _isReady => _qualityScore != null && _base64Image != null;
 
   // ─── Image pick / classify ────────────────────────────────────────────────
   Future<void> _pickImage(ImageSource src) async {
@@ -70,6 +59,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
   }
 
   Future<void> _classifyImage(File img) async {
+    final l = AppLocalizations.of(context);
     setState(() => _isLoading = true);
     try {
       final res = await ApiService.classifyLeafWithImage(img);
@@ -81,22 +71,19 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
       if (rawQ == null || rawQ == 'Unknown') {
         tLabel = 'Unknown';
-        score  = null;
-      }
-      else if (rawQ is int && rawQ >= 1 && rawQ <= 4) {
+        score = null;
+      } else if (rawQ is int && rawQ >= 1 && rawQ <= 4) {
         tLabel = 'T$rawQ';
-        score  = 5 - rawQ;
-      }
-      else if (rawQ is String) {
+        score = 5 - rawQ;
+      } else if (rawQ is String) {
         final m = RegExp(r'^(T[1-4])$').firstMatch(rawQ);
         if (m != null) {
           tLabel = m.group(1);
-          score  = 5 - int.parse(tLabel!.substring(1));
+          score = 5 - int.parse(tLabel!.substring(1));
         }
-      }
-      else{
+      } else {
         tLabel = 'Unknown';
-        score  = null;
+        score = null;
       }
 
       setState(() {
@@ -105,7 +92,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
         _qualityScore = score;
       });
     } catch (e) {
-      _showSnackBar('Classification failed: $e');
+      _showSnackBar(l.captureClassifyFailed('$e'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -113,13 +100,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   // ─── Proceed to prediction ─────────
   Future<void> _proceed() async {
-    if (_qualityScore == null || _base64Image == null) {
-      _showSnackBar('Please classify an image first');
+    final l = AppLocalizations.of(context);
+    if (!_isReady) {
+      _showSnackBar(l.captureFirst);
       return;
     }
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const LoadingScreen(message: "Processing prediction..."),
+        builder: (_) => LoadingScreen(message: l.captureProcessing),
       ),
     );
     try {
@@ -143,184 +131,568 @@ class _CaptureScreenState extends State<CaptureScreen> {
           'startingQuality': _qualityLabel,
         },
       );
+      // Clear this capture so returning to the tab starts fresh & empty.
+      if (mounted) {
+        setState(() {
+          _imageFile = null;
+          _base64Image = null;
+          _qualityScore = null;
+          _qualityLabel = null;
+          _leafAge = 1;
+        });
+      }
     } catch (e) {
       Navigator.of(context).pop(); // Dismiss loading
-      _showSnackBar('Prediction failed: $e');
+      _showSnackBar(l.capturePredictFailed('$e'));
     }
   }
 
-  void _showSnackBar(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-
-  // ─── Image preview widget ─────────────────────────────────────────────────
- /// Shows either: loading spinner, full image, or a centered placeholder that shrinks.
-Widget _preview() {
-  if (_isLoading) {
-    return const Center(child: CircularProgressIndicator());
-  }
-
-  if (_base64Image != null) {
-    return Image.memory(
-      base64Decode(_base64Image!),
-      height: 220,
-      fit: BoxFit.contain,
+  void _showSnackBar(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: TeaTheme.deep,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
-
-  // No fixed height here — it will size itself to the text
-  return const Center(
-    child: Text(
-      'No image selected',
-      textAlign: TextAlign.center,
-      style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
-    ),
-  );
-}
-
 
   // ─── UI ───────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final String? chipText = (_qualityLabel != null)
-        ? '$_qualityLabel — ${_tDesc(_qualityLabel!)}'
-        : null;
-
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: Colors.green.shade50,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // ── App-bar ──────────────────────────────────────────────────────
-            SliverAppBar(
-              pinned: true,
-              expandedHeight: 100,
-              backgroundColor: Colors.green.shade50,
-              flexibleSpace: const FlexibleSpaceBar(
-                title: Text(
-                  'Capture Leaf Image',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1B5E20),
-                  ),
-                ),
-              ),
-            ),
-            // ── Main content ────────────────────────────────────────────────
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Image or placeholder
-                    _preview(),
-                    // Modern label chip (only when image & label exist)
-                    if (chipText != null) ...[
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.center,
-                        child: Chip(
-                          backgroundColor: _qualityColor(_qualityLabel),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 4),
-                          label: Text(
-                            chipText,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    // Camera / gallery buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.camera_alt, color: Colors.white),
-                          label: const Text('Camera',
-                              style: TextStyle(color: Colors.white)),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
-                          ),
-                          onPressed: () => _pickImage(ImageSource.camera),
-                        ),
-                        const SizedBox(width: 10),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.photo, color: Colors.white),
-                          label: const Text('Gallery',
-                              style: TextStyle(color: Colors.white)),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
-                          ),
-                          onPressed: () => _pickImage(ImageSource.gallery),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    // Leaf-age selector
-                    const Text('Select Leaf Age (days)',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: List.generate(15, (index) {
-                        final day = index + 1;
-                        return ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _leafAge == day
-                            ? Colors.green.shade600
-                            : const Color(0xFFFEFDF5),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        onPressed: () => setState(() => _leafAge = day),
-                        child: Text(
-                          '$day',
-                          style: TextStyle(
-                          color: _leafAge == day
-                            ? Colors.white
-                            : Colors.green,
-                          ),
-                        ),
-                        );
-                      }),
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
-          ],
+      backgroundColor: TeaTheme.bgTop,
+      appBar: AppBar(
+        backgroundColor: TeaTheme.bgTop,
+        foregroundColor: TeaTheme.deep,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        title: Text(
+          l.captureTitle,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
         ),
       ),
+      body: Container(
+        decoration: TeaTheme.screenGradient(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _previewCard(),
+              if (_qualityLabel != null && !_isLoading) ...[
+                const SizedBox(height: 12),
+                _resultCard(),
+              ],
+              const SizedBox(height: 16),
+              _sourceButtons(),
+              const SizedBox(height: 16),
+              _tipsCard(),
+              const SizedBox(height: 16),
+              _leafAgeSection(),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: _proceedCta(),
+    );
+  }
 
-      // ── Bottom button ─────────────────────────────────────────────────────
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.analytics, color: Colors.white),
-            label: const Text(
-              'Proceed to Prediction',
-              style: TextStyle(color: Colors.white),
+  // ── Preview / capture zone ────────────────────────────────────────────────
+  Widget _previewCard() {
+    final l = AppLocalizations.of(context);
+    Widget content;
+    if (_isLoading) {
+      content = SizedBox(
+        height: 230,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: TeaTheme.primary),
+              const SizedBox(height: 14),
+              Text(l.captureAnalyzing,
+                  style: const TextStyle(
+                      color: TeaTheme.primary, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      );
+    } else if (_base64Image != null) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Image.memory(
+          base64Decode(_base64Image!),
+          height: 250,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else {
+      content = CustomPaint(
+        painter: _DashedRRectPainter(
+          color: TeaTheme.primary.withOpacity(0.35),
+          radius: 18,
+        ),
+        child: Container(
+          height: 230,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: TeaTheme.surface,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.add_a_photo_rounded,
+                    color: TeaTheme.primary, size: 30),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                l.captureNoLeaf,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: TeaTheme.deep,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l.captureUseCamera,
+                style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: _base64Image != null
+          ? TeaTheme.card().copyWith(borderRadius: BorderRadius.circular(18))
+          : null,
+      padding: _base64Image != null ? const EdgeInsets.all(6) : EdgeInsets.zero,
+      child: content,
+    );
+  }
+
+  // ── Classification result ─────────────────────────────────────────────────
+  Widget _resultCard() {
+    final l = AppLocalizations.of(context);
+    final label = _qualityLabel!;
+    final isUnknown = label == 'Unknown';
+    final c = isUnknown ? const Color(0xFFB45309) : TeaTheme.tier(label);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: c.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: c.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              gradient: isUnknown
+                  ? null
+                  : LinearGradient(colors: [c, c.withOpacity(0.78)]),
+              color: isUnknown ? c.withOpacity(0.15) : null,
+              borderRadius: BorderRadius.circular(15),
             ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-              textStyle: const TextStyle(fontSize: 16),
+            child: isUnknown
+                ? Icon(Icons.help_outline_rounded, color: c, size: 26)
+                : Center(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isUnknown ? l.captureNotValid : l.captureClassifiedGrade,
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: c,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isUnknown ? l.captureRetake : _tDesc(l, label),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: TeaTheme.deep,
+                  ),
+                ),
+              ],
             ),
-            onPressed: _isLoading ? null : _proceed,
+          ),
+          if (!isUnknown)
+            const Icon(Icons.check_circle_rounded,
+                color: TeaTheme.bright, size: 24),
+        ],
+      ),
+    );
+  }
+
+  // ── Camera / gallery ──────────────────────────────────────────────────────
+  Widget _sourceButtons() {
+    final l = AppLocalizations.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: _sourceButton(
+            icon: Icons.camera_alt_rounded,
+            label: l.captureCamera,
+            filled: true,
+            onTap: () => _pickImage(ImageSource.camera),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _sourceButton(
+            icon: Icons.photo_library_rounded,
+            label: l.captureGallery,
+            filled: false,
+            onTap: () => _pickImage(ImageSource.gallery),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sourceButton({
+    required IconData icon,
+    required String label,
+    required bool filled,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _isLoading ? null : onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          decoration: filled
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [TeaTheme.primary, TeaTheme.mid],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: TeaTheme.primary.withOpacity(0.30),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                )
+              : BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: TeaTheme.border),
+                ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  color: filled ? Colors.white : TeaTheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: filled ? Colors.white : TeaTheme.primary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
+
+  // ── Capture tips (improves classification) ────────────────────────────────
+  Widget _tipsCard() {
+    final l = AppLocalizations.of(context);
+    final tips = [
+      (Icons.wb_sunny_rounded, l.captureTip1),
+      (Icons.center_focus_strong_rounded, l.captureTip2),
+      (Icons.crop_din_rounded, l.captureTip3),
+    ];
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: TeaTheme.card(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: TeaTheme.gold.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(Icons.tips_and_updates_rounded,
+                    color: TeaTheme.gold, size: 17),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                l.captureTipsTitle,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                  color: TeaTheme.deep,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...tips.map((t) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Icon(t.$1, size: 16, color: TeaTheme.mid),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        t.$2,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF374151),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  // ── Leaf age selector ─────────────────────────────────────────────────────
+  Widget _leafAgeSection() {
+    final l = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: TeaTheme.card(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.spa_rounded, size: 18, color: TeaTheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                l.captureLeafAge,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: TeaTheme.deep,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: TeaTheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  l.captureDays(_leafAge),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: TeaTheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l.captureLeafAgeSub,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(15, (index) {
+              final day = index + 1;
+              final selected = _leafAge == day;
+              return GestureDetector(
+                onTap: () => setState(() => _leafAge = day),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 42,
+                  height: 42,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: selected
+                        ? const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [TeaTheme.primary, TeaTheme.mid],
+                          )
+                        : null,
+                    color: selected ? null : Colors.white,
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(
+                      color: selected ? Colors.transparent : TeaTheme.border,
+                    ),
+                    boxShadow: selected
+                        ? [
+                            BoxShadow(
+                              color: TeaTheme.primary.withOpacity(0.30),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Text(
+                    '$day',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: selected ? Colors.white : TeaTheme.deep,
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Sticky proceed CTA ────────────────────────────────────────────────────
+  Widget _proceedCta() {
+    final l = AppLocalizations.of(context);
+    final enabled = _isReady && !_isLoading;
+    return Container(
+      decoration: const BoxDecoration(
+        color: TeaTheme.bgBottom,
+        border: Border(top: BorderSide(color: TeaTheme.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: Opacity(
+            opacity: enabled ? 1 : 0.45,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: enabled
+                    ? _proceed
+                    : () => _showSnackBar(l.captureFirst),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [TeaTheme.deep, TeaTheme.primary, TeaTheme.bright],
+                    ),
+                    boxShadow: enabled
+                        ? [
+                            BoxShadow(
+                              color: TeaTheme.primary.withOpacity(0.38),
+                              blurRadius: 16,
+                              offset: const Offset(0, 8),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.analytics_rounded,
+                          color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        l.captureProceed,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Dashed rounded-rect border for the empty capture zone.
+class _DashedRRectPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+  _DashedRRectPainter({required this.color, required this.radius});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+    final rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    );
+    final path = Path()..addRRect(rrect);
+    const dash = 7.0, gap = 5.0;
+    for (final metric in path.computeMetrics()) {
+      double dist = 0;
+      while (dist < metric.length) {
+        canvas.drawPath(metric.extractPath(dist, dist + dash), paint);
+        dist += dash + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRRectPainter old) =>
+      old.color != color || old.radius != radius;
 }

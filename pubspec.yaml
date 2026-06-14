@@ -30,7 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  intl: ^0.20.2
+  flutter_localizations:
+    sdk: flutter
+  intl: 0.19.0
   image_picker: ^1.1.2
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -47,6 +49,10 @@ dependencies:
   # firebase_auth: ^4.17.4
   firebase_core: ^3.13.0
   firebase_auth: ^5.5.2
+  google_sign_in: ^6.2.1
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  firebase_remote_config: ^5.5.0
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +78,9 @@ flutter_icons:
 
 # The following section is specific to Flutter packages.
 flutter:
+
+  # Enables Flutter's gen-l10n localization (ARB → AppLocalizations).
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -128,3 +137,5 @@ flutter:
     - assets/login_bg.jpg 
     - assets/homesc4.jpg
     - assets/Login_image.webp
+    # Bundled Unicode fonts so Sinhala/Tamil PDF reports render fully offline
+    - assets/fonts/

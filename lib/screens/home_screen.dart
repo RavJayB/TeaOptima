@@ -1,13 +1,14 @@
 // lib/screens/home_screen.dart
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
-import '../services/config_service.dart';
+import '../services/api_service.dart';
+import '../theme/tea_theme.dart';
+import '../widgets/price_ticker_banner.dart';
 import 'main_screen.dart';
 
 // ────────────────────────────────────────────────────────────
@@ -44,40 +45,21 @@ class WeatherCache {
       final pos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
       final lat = pos.latitude, lon = pos.longitude;
-      final apiKey = ConfigService.openWeatherApiKey;
 
-      // 3) Reverse geocode
-      final geoUri = Uri.https('api.openweathermap.org', '/geo/1.0/reverse', {
-        'lat': '$lat',
-        'lon': '$lon',
-        'limit': '1',
-        'appid': apiKey,
-      });
-      final geoRes = await http.get(geoUri);
-      if (geoRes.statusCode == 200) {
-        final list = jsonDecode(geoRes.body) as List<dynamic>;
-        if (list.isNotEmpty) {
-          location = list[0]['name'] as String? ?? 'Unknown';
-        }
-      }
+      // 3) Reverse geocode via backend
+      final loc = await ApiService.getLocation(lat: lat, lon: lon);
+      location = (loc['name'] as String?) ?? 'Unknown';
 
-      // 4) Fetch weather
-      final wUri = Uri.https('api.openweathermap.org', '/data/2.5/weather', {
-        'lat': '$lat',
-        'lon': '$lon',
-        'units': 'metric',
-        'appid': apiKey,
-      });
-      final wRes  = await http.get(wUri);
-      final wData = jsonDecode(wRes.body);
-      temp = (wData['main']['temp'] as num).toDouble();
-      hum  = (wData['main']['humidity'] as num).toDouble();
-      rain = (wData['rain']?['1h'] as num?)?.toDouble() ?? 0;
+      // 4) Current weather via backend
+      final w = await ApiService.getCurrentWeather(lat: lat, lon: lon);
+      temp = (w['temp'] as num).toDouble();
+      hum  = (w['hum']  as num).toDouble();
+      rain = (w['rain'] as num).toDouble();
 
       // 5) Stamp fetch time
       _lastFetch = DateTime.now();
-    } catch (_) {
-      // swallow
+    } catch (e, st) {
+      debugPrint('WeatherCache.load failed: $e\n$st');
     }
   }
 }
@@ -95,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // carousel
   final _headerController = PageController();
   late Timer _carouselTimer;
+  int _currentPage = 0;
   final List<String> _headerImages = [
     'assets/onboard4.webp',
     'assets/onboard9.jpg',
@@ -102,8 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'assets/homesc4.jpg',
   ];
 
-  // greeting + user
-  String _greeting = '';
+  // user
   String get _userName {
     final raw = FirebaseAuth.instance.currentUser?.displayName ?? 'Farmer';
     return raw.isEmpty
@@ -114,10 +96,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _setupGreeting();
     _startCarousel();
     // THIS will only actually fetch if >15m or never fetched
-    WeatherCache.load().then((_) => setState(() {}));
+    WeatherCache.load().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -125,13 +108,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _carouselTimer.cancel();
     _headerController.dispose();
     super.dispose();
-  }
-
-  void _setupGreeting() {
-    final h = DateTime.now().hour;
-    if (h < 12) _greeting = 'Good Morning';
-    else if (h < 17) _greeting = 'Good Afternoon';
-    else _greeting = 'Good Evening';
   }
 
   void _startCarousel() {
@@ -148,194 +124,528 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // pick main metric
-    final metrics = {
-      'Temperature': WeatherCache.temp,
-      'Humidity'   : WeatherCache.hum,
-      'Rainfall'   : WeatherCache.rain,
-    };
-    final mainKey = metrics.entries
-        .reduce((a, b) => a.value >= b.value ? a : b)
-        .key;
-    final others = metrics.keys.where((k) => k != mainKey).toList();
-
-    Color green900 = Colors.green.shade900;
-    Color green700 = Colors.green.shade700;
-    Color grey700  = Colors.grey.shade700;
-
-    Widget tile(String key, double v, bool big) {
-      IconData icon;
-      switch (key) {
-        case 'Temperature': icon = Icons.thermostat; break;
-        case 'Humidity':    icon = Icons.water_drop;  break;
-        default:            icon = Icons.cloud;
-      }
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: big ? 45 : 28, color: big ? Colors.orange : grey700),
-          const SizedBox(height: 4),
-          Text(
-            big
-                ? '${v.toStringAsFixed(1)}°'
-                : key == 'Rainfall'
-                    ? '${v.toStringAsFixed(1)} mm'
-                    : key == 'Humidity'
-                        ? '${v.toStringAsFixed(0)} %'
-                        : '${v.toStringAsFixed(1)}°',
-            style: TextStyle(
-              fontSize: big ? 36 : 14,
-              fontWeight: big ? FontWeight.bold : FontWeight.normal,
-              color: big ? green900 : grey700,
+    return Scaffold(
+      backgroundColor: TeaTheme.bgTop,
+      extendBody: true,
+      body: Container(
+        decoration: TeaTheme.screenGradient(),
+        child: RefreshIndicator(
+          color: TeaTheme.primary,
+          onRefresh: () async {
+            await WeatherCache.load(force: true);
+            if (mounted) setState(() {});
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _heroCarousel(),
+                const SizedBox(height: 18),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: PriceTickerBanner(),
+                ),
+                const SizedBox(height: 18),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _weatherCard(),
+                ),
+                const SizedBox(height: 18),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _actionSection(),
+                ),
+                const SizedBox(height: 96),
+              ],
             ),
           ),
-          if (big) ...[
-            const SizedBox(height: 3),
-            Text(key, style: TextStyle(fontSize: 18, color: green700)),
-          ]
-        ],
-      );
+        ),
+      ),
+    );
+  }
+
+  // ── Hero carousel with overlay + page dots ────────────────────────────────
+  Widget _heroCarousel() {
+    final l = AppLocalizations.of(context);
+    IconData greetIcon;
+    final String greeting;
+    final h = DateTime.now().hour;
+    if (h < 12) {
+      greetIcon = Icons.wb_sunny_rounded;
+      greeting = l.homeGoodMorning;
+    } else if (h < 17) {
+      greetIcon = Icons.wb_twilight_rounded;
+      greeting = l.homeGoodAfternoon;
+    } else {
+      greetIcon = Icons.nights_stay_rounded;
+      greeting = l.homeGoodEvening;
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFEAF8EE),
-      extendBody: true,
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await WeatherCache.load(force: true);
-          setState(() {});
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ─── header carousel ────────────────────────────
-              SizedBox(
-                height: 260,
-                child: PageView.builder(
-                  controller: _headerController,
-                  itemCount: _headerImages.length,
-                  itemBuilder: (_, i) => Image.asset(
-                    _headerImages[i],
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  ),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+      child: SizedBox(
+        height: 300,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // images
+            PageView.builder(
+              controller: _headerController,
+              itemCount: _headerImages.length,
+              onPageChanged: (i) => setState(() => _currentPage = i),
+              itemBuilder: (_, i) => Image.asset(
+                _headerImages[i],
+                fit: BoxFit.cover,
+                width: double.infinity,
+              ),
+            ),
+            // legibility scrim
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x33000000),
+                    Color(0x00000000),
+                    Color(0x99000000),
+                  ],
+                  stops: [0.0, 0.42, 1.0],
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              // ─── greeting + name ───────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  '$_greeting $_userName!',
-                  style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: green900),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // ─── weather card ─────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Card(
-                  color: const Color(0xFFFEFDF5),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // location
-                        Row(
-                          children: [
-                            const Icon(Icons.location_pin,
-                                color: Colors.blue, size: 20),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                WeatherCache.location,
-                                style: TextStyle(fontSize: 16, color: grey700),
+            ),
+            // top brand row
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(20),
+                          border:
+                              Border.all(color: Colors.white.withOpacity(0.30)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.eco_rounded,
+                                color: Colors.white, size: 15),
+                            SizedBox(width: 5),
+                            Text(
+                              'TEAOPTIMA',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.6,
                               ),
                             ),
                           ],
                         ),
-                        const Divider(height: 24),
-
-                        // metrics row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            tile(others[0], metrics[others[0]]!, false),
-                            tile(mainKey, metrics[mainKey]!, true),
-                            tile(others[1], metrics[others[1]]!, false),
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-
-              const SizedBox(height: 27),
-
-              // ─── buttons ──────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: green900,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () => Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const MainScreen(startingIndex: 1),
+            ),
+            // greeting overlay
+            Positioned(
+              left: 22,
+              right: 22,
+              bottom: 34,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(greetIcon,
+                          color: Colors.white.withOpacity(0.95), size: 17),
+                      const SizedBox(width: 6),
+                      Text(
+                        greeting,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.95),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
                         ),
                       ),
-                      child: const Text('New Prediction',
-                          style: TextStyle(fontSize: 18, color: Colors.white)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${l.homeHi(_userName)} 🌱',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.4,
+                      shadows: [
+                        Shadow(color: Colors.black38, blurRadius: 8),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade600,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () => Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const MainScreen(startingIndex: 2),
-                        ),
-                      ),
-                      child: const Text('History',
-                          style: TextStyle(fontSize: 18, color: Colors.white)),
+                  const SizedBox(height: 3),
+                  Text(
+                    l.homeWelcome,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.88),
+                      fontSize: 13,
                     ),
                   ),
-                ]),
+                ],
               ),
+            ),
+            // page dots
+            Positioned(
+              bottom: 14,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(_headerImages.length, (i) {
+                  final active = i == _currentPage;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: active ? 22 : 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: active
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-              const SizedBox(height: 80),
+  // ── Weather card ──────────────────────────────────────────────────────────
+  Widget _weatherCard() {
+    final l = AppLocalizations.of(context);
+    final loc = WeatherCache.location;
+    final hasData = loc != 'Fetching…' && loc != 'Location disabled';
+    return Container(
+      decoration: TeaTheme.card(),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: TeaTheme.surface,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(Icons.location_on_rounded,
+                    color: TeaTheme.primary, size: 17),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.homeCurrentConditions,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey.shade500,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    Text(
+                      loc,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: TeaTheme.deep,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.refresh_rounded,
+                  size: 16, color: Colors.grey.shade400),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _weatherTile(Icons.thermostat_rounded, l.homeTemp,
+                  hasData ? '${WeatherCache.temp.toStringAsFixed(1)}°C' : '–',
+                  const Color(0xFFD9534F)),
+              const SizedBox(width: 8),
+              _weatherTile(Icons.water_drop_rounded, l.homeHumidity,
+                  hasData ? '${WeatherCache.hum.toStringAsFixed(0)}%' : '–',
+                  const Color(0xFF3B82F6)),
+              const SizedBox(width: 8),
+              _weatherTile(Icons.umbrella_rounded, l.homeRain,
+                  hasData ? '${WeatherCache.rain.toStringAsFixed(1)} mm' : '–',
+                  const Color(0xFF6B7280)),
+            ],
+          ),
+          if (!hasData) ...[
+            const SizedBox(height: 10),
+            Text(
+              loc == 'Location disabled'
+                  ? l.homeEnableLocation
+                  : l.homeFetching,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _weatherTile(IconData icon, String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.15)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 17),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: TeaTheme.deep,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 9.5,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Action section ────────────────────────────────────────────────────────
+  Widget _actionSection() {
+    final l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 10),
+          child: Text(
+            l.homeQuickActions,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+              color: TeaTheme.deep.withOpacity(0.7),
+            ),
+          ),
+        ),
+        // Primary CTA
+        _primaryAction(),
+        const SizedBox(height: 12),
+        // Secondary
+        _secondaryAction(),
+      ],
+    );
+  }
+
+  Widget _primaryAction() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const MainScreen(startingIndex: 1),
+          ),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [TeaTheme.deep, TeaTheme.primary, TeaTheme.mid],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: TeaTheme.primary.withOpacity(0.35),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -10,
+                bottom: -16,
+                child: Icon(Icons.eco_rounded,
+                    size: 110, color: Colors.white.withOpacity(0.08)),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(16),
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.30)),
+                      ),
+                      child: const Icon(Icons.camera_alt_rounded,
+                          color: Colors.white, size: 26),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AppLocalizations.of(context).homeNewPrediction,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            AppLocalizations.of(context).homeNewPredictionSub,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.85),
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.arrow_forward_rounded,
+                          color: Colors.white, size: 18),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _secondaryAction() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const MainScreen(startingIndex: 2),
+          ),
+        ),
+        child: Container(
+          decoration: TeaTheme.card().copyWith(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: TeaTheme.surface,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.insights_rounded,
+                    color: TeaTheme.primary, size: 23),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context).homePredictionHistory,
+                      style: const TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: TeaTheme.deep,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      AppLocalizations.of(context).homeHistorySub,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: Colors.grey.shade400, size: 22),
             ],
           ),
         ),

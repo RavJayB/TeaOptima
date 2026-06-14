@@ -13,27 +13,26 @@ class ConfigService {
     }
   }
 
-  // OpenWeatherMap API Key
-  static String get openWeatherApiKey {
-    final key = dotenv.env['OPENWEATHER_API_KEY'];
-    if (key == null || key.isEmpty) {
-      throw StateError('Missing OPENWEATHER_API_KEY. Add it to your .env (see .env.example).');
-    }
-    return key;
-  }
-
   // Backend service URLs
   // Note: These are public service endpoints, not secrets. Protection is via authentication on the backend.
   // For production, override these in .env to use your own services or different environments.
   static String get imageServiceUrl {
-    return dotenv.env['IMAGE_SERVICE_URL'] ?? 
+    return dotenv.env['IMAGE_SERVICE_URL'] ??
            'https://image-svc-1036518290491.asia-south1.run.app/classify';
   }
 
   static String get degradeServiceUrl {
-    return dotenv.env['DEGRADE_SERVICE_URL'] ?? 
+    return dotenv.env['DEGRADE_SERVICE_URL'] ??
            'https://degrade-svc-1036518290491.asia-south1.run.app/predict';
   }
+
+  // Weather endpoints — derived from degradeServiceUrl by stripping the /predict suffix.
+  // Weather + reverse geocode go through the backend so the OpenWeather key stays server-side.
+  static String get _degradeBase =>
+      degradeServiceUrl.replaceAll(RegExp(r'/predict/?$'), '');
+
+  static String get weatherCurrentUrl => '$_degradeBase/weather/current';
+  static String get weatherLocationUrl => '$_degradeBase/weather/location';
 
   // Firebase configuration (optional - firebase_options.dart is primary)
   // Note: Project ID and storage bucket are public identifiers, not secrets. Security is via Firebase Rules.
