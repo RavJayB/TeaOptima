@@ -1,5 +1,11 @@
 # TeaOptima 
 
+<div align="center">
+
+### 🌐 [www.teaoptima.lk](https://www.teaoptima.lk)
+
+</div>
+
 Research system for analyzing tea leaf quality and forecasting quality degradation using hybrid AI/ML models integrated with weather and environmental data, accessible via a mobile interface.
 
 ![Python](https://img.shields.io/badge/-Python-05122A?style=flat&logo=python)&nbsp;
