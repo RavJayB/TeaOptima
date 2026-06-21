@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../services/pdf_report_service.dart';
+import '../theme/tea_theme.dart';
 import '../services/pricing_service.dart';
 import '../services/recommendation_engine.dart';
 import '../services/locale_controller.dart';
@@ -148,9 +149,10 @@ class _ResultScreenState extends State<ResultScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFFF4F9F5),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: context.tea.bg,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
           top: false,
@@ -165,7 +167,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: context.tea.border,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -177,11 +179,11 @@ class _ResultScreenState extends State<ResultScreen> {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: _teaSurface,
+                        color: context.tea.surface,
                         borderRadius: BorderRadius.circular(11),
                       ),
-                      child: const Icon(Icons.translate_rounded,
-                          color: _teaPrimary, size: 20),
+                      child: Icon(Icons.translate_rounded,
+                          color: context.tea.accent, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -190,17 +192,17 @@ class _ResultScreenState extends State<ResultScreen> {
                         children: [
                           Text(
                             l.pdfExportLanguage,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w800,
-                              color: _teaDeep,
+                              color: context.tea.ink,
                             ),
                           ),
                           Text(
                             l.pdfChooseLanguage,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: context.tea.sub,
                             ),
                           ),
                         ],
@@ -222,10 +224,10 @@ class _ResultScreenState extends State<ResultScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 14),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: context.tea.card,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: isCurrent ? _teaPrimary : _teaBorder,
+                              color: isCurrent ? context.tea.accent : context.tea.border,
                               width: isCurrent ? 1.5 : 1,
                             ),
                           ),
@@ -233,10 +235,10 @@ class _ResultScreenState extends State<ResultScreen> {
                             children: [
                               Text(
                                 e.value,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: _teaDeep,
+                                  color: context.tea.ink,
                                 ),
                               ),
                               const Spacer(),
@@ -415,10 +417,10 @@ class _ResultScreenState extends State<ResultScreen> {
     final maxDay   = (maxRaw  is num) ? maxRaw.toInt() : int.tryParse(maxRaw.toString()) ?? 15;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F9F5),
+      backgroundColor: context.tea.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F9F5),
-        foregroundColor: const Color(0xFF0F3D2E),
+        backgroundColor: context.tea.bg,
+        foregroundColor: context.tea.ink,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
@@ -515,13 +517,7 @@ class _ResultScreenState extends State<ResultScreen> {
   Widget _buildBody(String leafAge, String startQual, String lastTier,
       int lastDay, int maxDay) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFF4F9F5), Color(0xFFEAF3EC)],
-        ),
-      ),
+      decoration: TeaTheme.gradientOf(context),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: Column(
@@ -570,8 +566,6 @@ class _ResultScreenState extends State<ResultScreen> {
   static const _teaPrimary = Color(0xFF1B5E3F);
   static const _teaMid = Color(0xFF2E7D5B);
   static const _teaBright = Color(0xFF22C55E);
-  static const _teaSurface = Color(0xFFE7F4EB);
-  static const _teaBorder = Color(0xFFD9E8DE);
   static const _teaGold = Color(0xFFD4A82C);
 
   Color _tierColor(String tier) {
@@ -594,18 +588,7 @@ class _ResultScreenState extends State<ResultScreen> {
   String _tierShort(String tier) =>
       RegExp(r'T[1-4]').firstMatch(tier)?.group(0) ?? tier;
 
-  BoxDecoration _surfaceCard() => BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _teaBorder),
-        boxShadow: [
-          BoxShadow(
-            color: _teaPrimary.withOpacity(0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      );
+  BoxDecoration _surfaceCard() => TeaTheme.cardOf(context);
 
   Widget _sectionHeading(IconData icon, String title, {Widget? trailing}) {
     return Row(
@@ -614,20 +597,20 @@ class _ResultScreenState extends State<ResultScreen> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: _teaSurface,
+            color: context.tea.surface,
             borderRadius: BorderRadius.circular(9),
           ),
-          child: Icon(icon, color: _teaPrimary, size: 17),
+          child: Icon(icon, color: context.tea.accent, size: 17),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.5,
-              color: _teaDeep,
+              color: context.tea.ink,
             ),
           ),
         ),
@@ -688,7 +671,7 @@ class _ResultScreenState extends State<ResultScreen> {
             style: TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w700,
-              color: Colors.grey.shade500,
+              color: context.tea.faint,
               letterSpacing: 1.2,
             ),
           ),
@@ -697,10 +680,10 @@ class _ResultScreenState extends State<ResultScreen> {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w800,
-              color: _teaDeep,
+              color: context.tea.ink,
             ),
           ),
         ],
@@ -712,7 +695,7 @@ class _ResultScreenState extends State<ResultScreen> {
         width: 1,
         height: 36,
         margin: const EdgeInsets.symmetric(horizontal: 4),
-        color: _teaBorder,
+        color: context.tea.border,
       );
 
   // ── Quality trajectory (chart + tier journey) ──────────────────────────
@@ -775,23 +758,23 @@ class _ResultScreenState extends State<ResultScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _teaSurface,
+                      color: context.tea.surface,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.event_rounded,
-                            size: 13, color: _teaPrimary),
+                        Icon(Icons.event_rounded,
+                            size: 13, color: context.tea.accent),
                         const SizedBox(width: 5),
                         Flexible(
                           child: Text(
                             l.resByDate(DateFormat('d MMM').format(
                                 DateTime.now().add(Duration(days: lastDay)))),
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11.5,
-                              color: _teaDeep,
+                              color: context.tea.ink,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -819,8 +802,8 @@ class _ResultScreenState extends State<ResultScreen> {
                     show: true,
                     drawVerticalLine: false,
                     horizontalInterval: 1,
-                    getDrawingHorizontalLine: (_) => const FlLine(
-                      color: _teaBorder,
+                    getDrawingHorizontalLine: (_) => FlLine(
+                      color: context.tea.border,
                       strokeWidth: 1,
                       dashArray: [4, 6],
                     ),
@@ -847,7 +830,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             v.toInt().toString(),
                             style: TextStyle(
                               fontSize: 10,
-                              color: Colors.grey.shade600,
+                              color: context.tea.sub,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -959,13 +942,13 @@ class _ResultScreenState extends State<ResultScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.touch_app_rounded,
-                      size: 12, color: Colors.grey.shade500),
+                      size: 12, color: context.tea.faint),
                   const SizedBox(width: 4),
                   Text(
                     l.resTapPoint,
                     style: TextStyle(
                       fontSize: 10.5,
-                      color: Colors.grey.shade600,
+                      color: context.tea.sub,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -1053,10 +1036,10 @@ class _ResultScreenState extends State<ResultScreen> {
             const SizedBox(height: 12),
             Text(
               dateStr,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
-                color: _teaDeep,
+                color: context.tea.ink,
               ),
             ),
             const SizedBox(height: 10),
@@ -1076,15 +1059,15 @@ class _ResultScreenState extends State<ResultScreen> {
               ],
             ),
             const SizedBox(height: 14),
-            const Divider(height: 1, color: _teaBorder),
+            Divider(height: 1, color: context.tea.border),
             const SizedBox(height: 12),
             Text(
               l.resWhatDrives,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.4,
-                color: _teaPrimary,
+                color: context.tea.accent,
               ),
             ),
             const SizedBox(height: 10),
@@ -1097,7 +1080,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   l.resNoDriver,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: context.tea.sub,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -1174,9 +1157,9 @@ class _ResultScreenState extends State<ResultScreen> {
           Expanded(
             child: Text(
               factor,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF1F2937),
+                color: context.tea.ink,
                 height: 1.35,
               ),
             ),
@@ -1223,7 +1206,7 @@ class _ResultScreenState extends State<ResultScreen> {
           label,
           style: TextStyle(
             fontSize: 10.5,
-            color: Colors.grey.shade600,
+            color: context.tea.sub,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -1269,10 +1252,10 @@ class _ResultScreenState extends State<ResultScreen> {
               Expanded(
                 child: Text(
                   _factorLabel(l, key),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
-                    color: _teaDeep,
+                    color: context.tea.ink,
                   ),
                 ),
               ),
@@ -1282,7 +1265,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w700,
-                    color: Colors.grey.shade600,
+                    color: context.tea.sub,
                   ),
                 ),
             ],
@@ -1292,7 +1275,7 @@ class _ResultScreenState extends State<ResultScreen> {
             borderRadius: BorderRadius.circular(6),
             child: Stack(
               children: [
-                Container(height: 8, color: _teaSurface),
+                Container(height: 8, color: context.tea.surface),
                 FractionallySizedBox(
                   widthFactor: frac == 0 ? 0.012 : frac,
                   child: Container(
@@ -1451,17 +1434,17 @@ class _ResultScreenState extends State<ResultScreen> {
                     tierKeep.isEmpty
                         ? l.resKeepGrade
                         : l.resLockGrade(tierKeep),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: _teaDeep,
+                      color: context.tea.ink,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Row(
                     children: [
                       Icon(Icons.event_rounded,
-                          size: 13, color: Colors.grey.shade600),
+                          size: 13, color: context.tea.sub),
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
@@ -1471,7 +1454,7 @@ class _ResultScreenState extends State<ResultScreen> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade700,
+                            color: context.tea.sub,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1507,7 +1490,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11,
-                          color: Colors.grey.shade600,
+                          color: context.tea.sub,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1559,10 +1542,10 @@ class _ResultScreenState extends State<ResultScreen> {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w800,
-                color: _teaDeep,
+                color: context.tea.ink,
               ),
             ),
             const SizedBox(height: 2),
@@ -1570,7 +1553,7 @@ class _ResultScreenState extends State<ResultScreen> {
               label,
               style: TextStyle(
                 fontSize: 9.5,
-                color: Colors.grey.shade600,
+                color: context.tea.sub,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
               ),
@@ -1652,21 +1635,21 @@ class _ResultScreenState extends State<ResultScreen> {
             Container(
               padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
               decoration: BoxDecoration(
-                color: _teaSurface,
+                color: context.tea.surface,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _teaBorder),
+                border: Border.all(color: context.tea.border),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.lightbulb_outline_rounded,
-                      size: 13, color: _teaPrimary),
+                  Icon(Icons.lightbulb_outline_rounded,
+                      size: 13, color: context.tea.accent),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       l.resInsightsBlurb,
                       style: TextStyle(
                         fontSize: 11,
-                        color: _teaPrimary,
+                        color: context.tea.accent,
                         fontWeight: FontWeight.w600,
                         height: 1.3,
                       ),
@@ -1737,10 +1720,10 @@ class _ResultScreenState extends State<ResultScreen> {
                 Expanded(
                   child: Text(
                     r.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w900,
-                      color: _teaDeep,
+                      color: context.tea.ink,
                       letterSpacing: 0.4,
                       height: 1.25,
                     ),
@@ -1777,7 +1760,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 r.detail,
                 style: TextStyle(
                   fontSize: 12.5,
-                  color: Colors.grey.shade800,
+                  color: context.tea.sub,
                   height: 1.4,
                 ),
               ),
@@ -1827,10 +1810,10 @@ class _ResultScreenState extends State<ResultScreen> {
   Widget _buildBottomCta() {
     final l = AppLocalizations.of(context);
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFEAF3EC),
+      decoration: BoxDecoration(
+        color: context.tea.bgBottom,
         border: Border(
-          top: BorderSide(color: _teaBorder, width: 1),
+          top: BorderSide(color: context.tea.border, width: 1),
         ),
       ),
       child: SafeArea(
@@ -2828,10 +2811,10 @@ class _ResultScreenState extends State<ResultScreen> {
             bottom: MediaQuery.of(ctx).viewInsets.bottom,
           ),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFFAFAF7),
+            decoration: BoxDecoration(
+              color: context.tea.bg,
               borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(28)),
+                  const BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: SafeArea(
               top: false,
@@ -2846,7 +2829,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         width: 44,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
+                          color: context.tea.border,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -2857,11 +2840,11 @@ class _ResultScreenState extends State<ResultScreen> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade50,
+                            color: context.tea.surface,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(Icons.local_florist_rounded,
-                              color: Colors.green.shade700, size: 22),
+                              color: context.tea.accent, size: 22),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -2873,7 +2856,7 @@ class _ResultScreenState extends State<ResultScreen> {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.green.shade900,
+                                  color: context.tea.ink,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -2881,7 +2864,7 @@ class _ResultScreenState extends State<ResultScreen> {
                                 l.prcRateCardSub,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey.shade700,
+                                  color: context.tea.sub,
                                   height: 1.3,
                                 ),
                               ),
@@ -2983,9 +2966,9 @@ class _ResultScreenState extends State<ResultScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.tea.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: context.tea.border),
       ),
       child: Row(
         children: [
@@ -3025,7 +3008,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   desc,
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey.shade600,
+                    color: context.tea.sub,
                   ),
                 ),
               ],
@@ -3047,19 +3030,19 @@ class _ResultScreenState extends State<ResultScreen> {
                 isDense: true,
                 prefixText: 'Rs ',
                 prefixStyle: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: context.tea.sub,
                   fontWeight: FontWeight.w600,
                 ),
                 suffixText: '/kg',
                 suffixStyle: TextStyle(
-                  color: Colors.grey.shade500,
+                  color: context.tea.faint,
                   fontSize: 11,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 8, vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: context.tea.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -3089,7 +3072,7 @@ class _ResultScreenState extends State<ResultScreen> {
         ),
         title: Row(
           children: [
-            Icon(Icons.scale_rounded, color: Colors.green.shade700),
+            Icon(Icons.scale_rounded, color: context.tea.accent),
             const SizedBox(width: 8),
             Text(l.batchTitle),
           ],
@@ -3104,7 +3087,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 l.batchPrompt,
                 style: TextStyle(
                   fontSize: 12.5,
-                  color: Colors.grey.shade700,
+                  color: context.tea.sub,
                   height: 1.3,
                 ),
               ),
@@ -3122,7 +3105,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 decoration: InputDecoration(
                   suffixText: 'kg',
                   suffixStyle: TextStyle(
-                    color: Colors.grey.shade700,
+                    color: context.tea.sub,
                     fontWeight: FontWeight.w600,
                   ),
                   border: OutlineInputBorder(
@@ -3144,9 +3127,9 @@ class _ResultScreenState extends State<ResultScreen> {
                   return ActionChip(
                     label: Text('$q kg'),
                     onPressed: () => ctrl.text = q.toString(),
-                    backgroundColor: Colors.green.shade50,
+                    backgroundColor: context.tea.surface,
                     labelStyle: TextStyle(
-                      color: Colors.green.shade800,
+                      color: context.tea.accent,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),

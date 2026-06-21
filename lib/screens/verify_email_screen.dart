@@ -113,9 +113,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     final l = AppLocalizations.of(context);
     final email = AuthService.currentUser?.email ?? '';
     return Scaffold(
-      backgroundColor: TeaTheme.bgTop,
+      backgroundColor: context.tea.bg,
       body: Container(
-        decoration: TeaTheme.screenGradient(),
+        decoration: TeaTheme.gradientOf(context),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -149,10 +149,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   Text(
                     l.verifyTitle,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
-                      color: TeaTheme.deep,
+                      color: context.tea.ink,
                       letterSpacing: -0.3,
                     ),
                   ),
@@ -163,7 +163,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.45,
-                      color: Colors.grey.shade700,
+                      color: context.tea.sub,
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -180,8 +180,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                           : '${l.verifyResend} ($_resendIn)',
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: TeaTheme.primary,
-                      side: const BorderSide(color: TeaTheme.border),
+                      foregroundColor: context.tea.accent,
+                      side: BorderSide(color: context.tea.border),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       minimumSize: const Size(double.infinity, 0),
                       shape: RoundedRectangleBorder(
@@ -194,7 +194,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     onPressed: _useAnother,
                     child: Text(
                       l.verifyUseAnother,
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(color: context.tea.sub),
                     ),
                   ),
                 ],

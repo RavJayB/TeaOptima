@@ -52,7 +52,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TeaTheme.bgTop,
+      backgroundColor: context.tea.bg,
       extendBody: true,
       // IndexedStack keeps each tab's state alive when switching.
       body: IndexedStack(index: _selectedIndex, children: _screens),
@@ -66,12 +66,14 @@ class _MainScreenState extends State<MainScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.tea.card,
           borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: TeaTheme.border),
+          border: Border.all(color: context.tea.border),
           boxShadow: [
             BoxShadow(
-              color: TeaTheme.deep.withOpacity(0.13),
+              color: context.tea.isDark
+                  ? Colors.black.withOpacity(0.45)
+                  : TeaTheme.deep.withOpacity(0.13),
               blurRadius: 22,
               offset: const Offset(0, 8),
             ),
@@ -124,7 +126,7 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             Icon(
               icon,
-              color: active ? Colors.white : const Color(0xFF9AA5A0),
+              color: active ? Colors.white : context.tea.faint,
               size: 23,
             ),
             // Label animates in only for the active tab.

@@ -106,9 +106,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: TeaTheme.bgTop,
+      backgroundColor: context.tea.bg,
       body: Container(
-        decoration: TeaTheme.screenGradient(),
+        decoration: TeaTheme.gradientOf(context),
         child: Column(
           children: [
             _header(l),
@@ -126,7 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _nameC,
                         textCapitalization: TextCapitalization.words,
                         decoration:
-                            TeaTheme.input(l.fullNameHint, Icons.person_rounded),
+                            TeaTheme.input(l.fullNameHint, Icons.person_rounded, context: context),
                         validator: (v) => v != null && v.trim().isNotEmpty
                             ? null
                             : l.nameRequired,
@@ -136,7 +136,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _emailC,
                         keyboardType: TextInputType.emailAddress,
                         decoration: TeaTheme.input(
-                            l.emailAddressHint, Icons.email_rounded),
+                            l.emailAddressHint, Icons.email_rounded, context: context),
                         validator: (v) => v != null && v.contains('@')
                             ? null
                             : l.validEmailRequired,
@@ -148,12 +148,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         decoration: TeaTheme.input(
                           l.passwordMinHint,
                           Icons.lock_rounded,
+                          context: context,
                           suffix: IconButton(
                             icon: Icon(
                               _obscure
                                   ? Icons.visibility_off_rounded
                                   : Icons.visibility_rounded,
-                              color: TeaTheme.primary,
+                              color: context.tea.accent,
                               size: 20,
                             ),
                             onPressed: () =>
@@ -177,12 +178,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         textAlign: TextAlign.center,
                         text: TextSpan(
                           text: '${l.alreadyHaveAccount}  ',
-                          style: TextStyle(color: Colors.grey.shade600),
+                          style: TextStyle(color: context.tea.sub),
                           children: [
                             TextSpan(
                               text: l.signIn,
-                              style: const TextStyle(
-                                color: TeaTheme.primary,
+                              style: TextStyle(
+                                color: context.tea.accent,
                                 fontWeight: FontWeight.w800,
                               ),
                               recognizer: TapGestureRecognizer()
@@ -304,12 +305,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: RichText(
             text: TextSpan(
               text: l.iAgreeTo,
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+              style: TextStyle(color: context.tea.sub, fontSize: 13),
               children: [
                 TextSpan(
                   text: l.privacyPolicy,
-                  style: const TextStyle(
-                    color: TeaTheme.primary,
+                  style: TextStyle(
+                    color: context.tea.accent,
                     fontWeight: FontWeight.w800,
                   ),
                   recognizer: TapGestureRecognizer()
@@ -329,26 +330,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _orDivider(AppLocalizations l) {
     return Row(
       children: [
-        const Expanded(child: Divider(color: TeaTheme.border, thickness: 1)),
+        Expanded(child: Divider(color: context.tea.border, thickness: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             l.authOr,
             style: TextStyle(
-              color: Colors.grey.shade500,
+              color: context.tea.faint,
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        const Expanded(child: Divider(color: TeaTheme.border, thickness: 1)),
+        Expanded(child: Divider(color: context.tea.border, thickness: 1)),
       ],
     );
   }
 
   Widget _googleButton(AppLocalizations l) {
     return Material(
-      color: Colors.white,
+      color: context.tea.card,
       borderRadius: BorderRadius.circular(15),
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
@@ -357,15 +358,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           padding: const EdgeInsets.symmetric(vertical: 15),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: TeaTheme.border),
+            border: Border.all(color: context.tea.border),
           ),
           child: Center(
             child: _loading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2.4, color: TeaTheme.primary),
+                        strokeWidth: 2.4, color: context.tea.accent),
                   )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -374,9 +375,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(width: 10),
                       Text(
                         l.authContinueGoogle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: TeaTheme.deep,
+                          color: context.tea.ink,
                           fontWeight: FontWeight.w700,
                         ),
                       ),

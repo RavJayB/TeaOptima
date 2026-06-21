@@ -125,10 +125,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TeaTheme.bgTop,
+      backgroundColor: context.tea.bg,
       extendBody: true,
       body: Container(
-        decoration: TeaTheme.screenGradient(),
+        decoration: TeaTheme.gradientOf(context),
         child: RefreshIndicator(
           color: TeaTheme.primary,
           onRefresh: () async {
@@ -342,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final loc = WeatherCache.location;
     final hasData = loc != 'Fetching…' && loc != 'Location disabled';
     return Container(
-      decoration: TeaTheme.card(),
+      decoration: TeaTheme.cardOf(context),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: TeaTheme.surface,
+                  color: context.tea.surface,
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: const Icon(Icons.location_on_rounded,
@@ -369,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade500,
+                        color: context.tea.faint,
                         letterSpacing: 1.2,
                       ),
                     ),
@@ -377,17 +377,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       loc,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color: TeaTheme.deep,
+                        color: context.tea.ink,
                       ),
                     ),
                   ],
                 ),
               ),
               Icon(Icons.refresh_rounded,
-                  size: 16, color: Colors.grey.shade400),
+                  size: 16, color: context.tea.faint),
             ],
           ),
           const SizedBox(height: 14),
@@ -415,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 11.5,
                 fontStyle: FontStyle.italic,
-                color: Colors.grey.shade600,
+                color: context.tea.sub,
               ),
             ),
           ],
@@ -449,10 +449,10 @@ class _HomeScreenState extends State<HomeScreen> {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
-                color: TeaTheme.deep,
+                color: context.tea.ink,
               ),
             ),
             const SizedBox(height: 2),
@@ -460,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
               label,
               style: TextStyle(
                 fontSize: 9.5,
-                color: Colors.grey.shade600,
+                color: context.tea.sub,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -484,7 +484,7 @@ class _HomeScreenState extends State<HomeScreen> {
               fontSize: 11,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.5,
-              color: TeaTheme.deep.withOpacity(0.7),
+              color: context.tea.ink.withOpacity(0.7),
             ),
           ),
         ),
@@ -604,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         child: Container(
-          decoration: TeaTheme.card().copyWith(
+          decoration: TeaTheme.cardOf(context).copyWith(
             borderRadius: BorderRadius.circular(18),
           ),
           padding: const EdgeInsets.all(16),
@@ -614,7 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: TeaTheme.surface,
+                  color: context.tea.surface,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(Icons.insights_rounded,
@@ -627,10 +627,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Text(
                       AppLocalizations.of(context).homePredictionHistory,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w800,
-                        color: TeaTheme.deep,
+                        color: context.tea.ink,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -638,14 +638,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       AppLocalizations.of(context).homeHistorySub,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: context.tea.sub,
                       ),
                     ),
                   ],
                 ),
               ),
               Icon(Icons.chevron_right_rounded,
-                  color: Colors.grey.shade400, size: 22),
+                  color: context.tea.faint, size: 22),
             ],
           ),
         ),

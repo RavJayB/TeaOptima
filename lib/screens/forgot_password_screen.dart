@@ -57,16 +57,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: TeaTheme.bgTop,
+      backgroundColor: context.tea.bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        foregroundColor: TeaTheme.deep,
+        foregroundColor: context.tea.ink,
         elevation: 0,
         title: Text(l.resetPassword,
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
       ),
       body: Container(
-        decoration: TeaTheme.screenGradient(),
+        decoration: TeaTheme.gradientOf(context),
         child: SingleChildScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
@@ -79,21 +79,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   width: 84,
                   height: 84,
                   decoration: BoxDecoration(
-                    color: TeaTheme.surface,
+                    color: context.tea.surface,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.lock_reset_rounded,
-                      color: TeaTheme.primary, size: 42),
+                  child: Icon(Icons.lock_reset_rounded,
+                      color: context.tea.accent, size: 42),
                 ),
               ),
               const SizedBox(height: 20),
               Text(
                 l.forgotTitle,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  color: TeaTheme.deep,
+                  color: context.tea.ink,
                 ),
               ),
               const SizedBox(height: 8),
@@ -101,7 +101,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 l.forgotSubtitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    color: Colors.grey.shade600, fontSize: 13, height: 1.4),
+                    color: context.tea.sub, fontSize: 13, height: 1.4),
               ),
               const SizedBox(height: 28),
               Form(
@@ -110,7 +110,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   controller: _emailC,
                   keyboardType: TextInputType.emailAddress,
                   decoration:
-                      TeaTheme.input(l.emailAddressHint, Icons.email_rounded),
+                      TeaTheme.input(l.emailAddressHint, Icons.email_rounded,
+                          context: context),
                   validator: (v) => v != null && v.contains('@')
                       ? null
                       : l.validEmailRequired,
